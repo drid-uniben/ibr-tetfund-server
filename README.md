@@ -1,6 +1,6 @@
 # IBR Tetfund Server
 
-This is the backend server for the DRID application.
+A Research Submission Management API for grants and research funding.
 
 ## Running the Project
 
