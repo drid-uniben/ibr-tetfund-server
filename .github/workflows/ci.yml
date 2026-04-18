@@ -63,10 +63,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # CRITICAL: Generate Prisma client
-      - name: Prisma generate
-        run: pnpm exec prisma generate
-
       - name: Lint
         run: pnpm lint
 
