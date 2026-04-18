@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "staging"]
+  pull_request:
+    branches: ["main", "staging"]
+
+jobs:
+
+  backend:
+    name: Backend lint/build
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd="mongosh --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      NODE_ENV: test
+
+      DATABASE_URL: mongodb://localhost:27017/testdb
+
+      API_URL: http://localhost:3000
+
+      JWT_ACCESS_SECRET: ci_secret_access_key_at_least_32_chars_long
+      JWT_REFRESH_SECRET: ci_secret_refresh_key_at_least_32_chars_long
+
+      SMTP_HOST: localhost
+      SMTP_PORT: 1025
+      SMTP_USER: test
+      SMTP_PASS: testpassword
+      EMAIL_FROM: test@example.com
+
+      ADMIN_NAME: CI Admin
+      ADMIN_EMAIL: ci-admin@example.com
+      ADMIN_PASSWORD: ci-admin-password
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.23.0"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # CRITICAL: Generate Prisma client
+      - name: Prisma generate
+        run: pnpm prisma generate
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Build
+        run: pnpm build
+
+      # Optional
+      # - name: Test
+      #   run: pnpm test
+
+      
