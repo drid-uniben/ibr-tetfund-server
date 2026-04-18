@@ -65,7 +65,7 @@ jobs:
 
       # CRITICAL: Generate Prisma client
       - name: Prisma generate
-        run: pnpm prisma generate
+        run: pnpm exec prisma generate
 
       - name: Lint
         run: pnpm lint
