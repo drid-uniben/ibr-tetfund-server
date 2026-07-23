@@ -28,6 +28,9 @@ const validateEnv = (): void => {
     PORT: num({ default: 3000 }),
     MONGODB_URI: url(),
     FRONTEND_URL: url(),
+    // Leave blank for a host-only refresh cookie. Set to the shared parent
+    // domain only if the API and frontend are subdomains of one domain you own.
+    COOKIE_DOMAIN: str({ default: '' }),
     API_URL: url(),
     LOG_LEVEL: str({
       choices: ['error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly'],
