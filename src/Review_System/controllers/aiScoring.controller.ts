@@ -55,7 +55,7 @@ export const generateAIReviewForProposal = async (
     await aiReview.save();
 
     // Generate AI scores and update the review
-    await generateAIReviewScores(aiReview._id as string);
+    await generateAIReviewScores(String(aiReview._id));
 
     // Fetch the updated review
     const completedAIReview = await Review.findById(aiReview._id);
