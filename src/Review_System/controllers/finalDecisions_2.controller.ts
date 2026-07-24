@@ -9,7 +9,6 @@ import asyncHandler from '../../utils/asyncHandler';
 import logger from '../../utils/logger';
 import { IUser } from '../../model/user.model';
 import emailService from '../../services/email.service';
-import mongoose from 'mongoose';
 
 // Define a generic response interface for admin controller
 interface IAdminResponse {
@@ -106,43 +105,32 @@ class FullProposalDecisionsController {
         {
           $unwind: '$submitterDetails',
         },
-        // Lookup faculty details
+        // faculty is a title string on the user (Option A); synthesize the
+        // previous facultyDetails shape so downstream stages are unchanged.
         {
-          $lookup: {
-            from: 'faculties',
-            localField: 'submitterDetails.faculty',
-            foreignField: '_id',
-            as: 'facultyDetails',
-          },
-        },
-        {
-          $unwind: {
-            path: '$facultyDetails',
-            preserveNullAndEmptyArrays: true,
+          $addFields: {
+            facultyDetails: {
+              _id: '$submitterDetails.faculty',
+              title: '$submitterDetails.faculty',
+            },
           },
         },
         // Apply faculty filter if provided
-        ...(faculty
-          ? [
-              {
-                $match: {
-                  'facultyDetails._id': new mongoose.Types.ObjectId(
-                    faculty as string
-                  ),
-                },
-              },
-            ]
-          : []),
+        ...(faculty ? [
+          {
+            $match: {
+              'facultyDetails._id': faculty as string,
+            },
+          },
+        ] : []),
         // Apply status filter if provided
-        ...(status
-          ? [
-              {
-                $match: {
-                  status: status as string,
-                },
-              },
-            ]
-          : []),
+        ...(status ? [
+          {
+            $match: {
+              status: status as string,
+            },
+          },
+        ] : []),
         // Calculate statistics
         {
           $group: {
@@ -211,7 +199,7 @@ class FullProposalDecisionsController {
                       {
                         $lte: [
                           '$deadline',
-                          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+                          new Date(Date.now() + (7 * 24 * 60 * 60 * 1000)), // 7 days from now
                         ],
                       },
                     ],
@@ -269,34 +257,24 @@ class FullProposalDecisionsController {
         {
           $unwind: '$submitterDetails',
         },
-        // Lookup faculty details
+        // faculty is a title string on the user (Option A); synthesize the
+        // previous facultyDetails shape so downstream stages are unchanged.
         {
-          $lookup: {
-            from: 'faculties',
-            localField: 'submitterDetails.faculty',
-            foreignField: '_id',
-            as: 'facultyDetails',
+          $addFields: {
+            facultyDetails: {
+              _id: '$submitterDetails.faculty',
+              title: '$submitterDetails.faculty',
+            },
           },
         },
+        // department is a title string on the user (Option A); synthesize the
+        // previous departmentDetails shape so downstream stages are unchanged.
         {
-          $unwind: {
-            path: '$facultyDetails',
-            preserveNullAndEmptyArrays: true,
-          },
-        },
-        // Lookup department details
-        {
-          $lookup: {
-            from: 'departments',
-            localField: 'submitterDetails.department',
-            foreignField: '_id',
-            as: 'departmentDetails',
-          },
-        },
-        {
-          $unwind: {
-            path: '$departmentDetails',
-            preserveNullAndEmptyArrays: true,
+          $addFields: {
+            departmentDetails: {
+              _id: '$submitterDetails.department',
+              title: '$submitterDetails.department',
+            },
           },
         },
       ];
@@ -305,9 +283,7 @@ class FullProposalDecisionsController {
       if (faculty) {
         dataPipeline.push({
           $match: {
-            'facultyDetails._id': new mongoose.Types.ObjectId(
-              faculty as string
-            ),
+            'facultyDetails._id': faculty as string,
           },
         });
       }
@@ -697,10 +673,6 @@ class FullProposalDecisionsController {
           path: 'submitter',
           select:
             'name email userType phoneNumber alternativeEmail faculty department',
-          populate: [
-            { path: 'faculty', select: 'title code' },
-            { path: 'department', select: 'title code' },
-          ],
         });
 
       if (!fullProposal) {
@@ -754,10 +726,6 @@ class FullProposalDecisionsController {
         .populate({
           path: 'submitter',
           select: 'email name faculty department',
-          populate: [
-            { path: 'faculty', select: 'title' },
-            { path: 'department', select: 'title' },
-          ],
         });
 
       if (!fullProposal) {

@@ -9,9 +9,5 @@ router.get(
   '/by-faculty-code/:facultyCode',
   departmentController.getDepartmentsByFacultyCode
 );
-router.get(
-  '/by-faculty/:facultyId',
-  departmentController.getDepartmentsByFaculty
-);
 
 export default router;

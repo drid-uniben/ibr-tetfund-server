@@ -4,7 +4,7 @@ import { NotFoundError, UnauthorizedError } from '../utils/customErrors';
 import asyncHandler from '../utils/asyncHandler';
 import logger from '../utils/logger';
 import User, { IUser } from '../model/user.model';
-import Faculty from '../Proposal_Submission/models/faculty.model';
+import { findUnitByTitle } from '../utils/facultyContent';
 import emailService from '../services/email.service';
 import { PipelineStage } from 'mongoose';
 // Define a generic response interface for admin controller
@@ -320,16 +320,19 @@ class AdminController {
         const proposalSubmitters = await Proposal.find().distinct('submitter');
         logger.info(`Found ${proposalSubmitters.length} proposal submitters`);
 
-        // Find users who submitted proposals and get their faculty IDs
-        const facultyIds = await User.find({
-          _id: { $in: proposalSubmitters },
-        }).distinct('faculty');
+        // faculty is stored as a title string on the user (Option A).
+        const facultyTitles = (
+          await User.find({
+            _id: { $in: proposalSubmitters },
+          }).distinct('faculty')
+        ).filter(Boolean) as string[];
 
-        logger.info(`Found ${facultyIds.length} distinct faculty IDs`);
+        logger.info(`Found ${facultyTitles.length} distinct faculties`);
 
-        // Find the faculty details for these IDs
-        const faculties = await Faculty.find({
-          _id: { $in: facultyIds },
+        // Enrich each title with its code/type from the canonical dataset.
+        const faculties = facultyTitles.map((title) => {
+          const unit = findUnitByTitle(title);
+          return { title, code: unit?.code ?? null, type: unit?.type ?? null };
         });
 
         logger.info(`Retrieved ${faculties.length} faculties with proposals`);

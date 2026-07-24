@@ -9,7 +9,6 @@ import logger from '../../utils/logger';
 import { IUser } from '../../model/user.model';
 import emailService from '../../services/email.service';
 import Award, { AwardStatus } from '../../Review_System/models/award.model';
-import mongoose from 'mongoose';
 
 // Define a generic response interface for admin controller
 interface IAdminResponse {
@@ -85,19 +84,14 @@ class DecisionsController {
         {
           $unwind: '$submitterDetails',
         },
-        // Lookup faculty details
+        // faculty is a title string on the user (Option A); synthesize the
+        // previous facultyDetails shape so downstream stages are unchanged.
         {
-          $lookup: {
-            from: 'faculties',
-            localField: 'submitterDetails.faculty',
-            foreignField: '_id',
-            as: 'facultyDetails',
-          },
-        },
-        {
-          $unwind: {
-            path: '$facultyDetails',
-            preserveNullAndEmptyArrays: true,
+          $addFields: {
+            facultyDetails: {
+              _id: '$submitterDetails.faculty',
+              title: '$submitterDetails.faculty',
+            },
           },
         },
         // Lookup award details
@@ -124,17 +118,13 @@ class DecisionsController {
           },
         },
         // Apply faculty filter if provided
-        ...(faculty
-          ? [
-              {
-                $match: {
-                  'facultyDetails._id': new mongoose.Types.ObjectId(
-                    faculty as string
-                  ),
-                },
-              },
-            ]
-          : []),
+        ...(faculty ? [
+          {
+            $match: {
+              'facultyDetails._id': faculty as string,
+            },
+          },
+        ] : []),
         // Calculate statistics
         {
           $group: {
@@ -217,34 +207,24 @@ class DecisionsController {
         {
           $unwind: '$submitterDetails',
         },
-        // Lookup faculty details
+        // faculty is a title string on the user (Option A); synthesize the
+        // previous facultyDetails shape so downstream stages are unchanged.
         {
-          $lookup: {
-            from: 'faculties',
-            localField: 'submitterDetails.faculty',
-            foreignField: '_id',
-            as: 'facultyDetails',
+          $addFields: {
+            facultyDetails: {
+              _id: '$submitterDetails.faculty',
+              title: '$submitterDetails.faculty',
+            },
           },
         },
+        // department is a title string on the user (Option A); synthesize the
+        // previous departmentDetails shape so downstream stages are unchanged.
         {
-          $unwind: {
-            path: '$facultyDetails',
-            preserveNullAndEmptyArrays: true,
-          },
-        },
-        // Lookup department details
-        {
-          $lookup: {
-            from: 'departments',
-            localField: 'submitterDetails.department',
-            foreignField: '_id',
-            as: 'departmentDetails',
-          },
-        },
-        {
-          $unwind: {
-            path: '$departmentDetails',
-            preserveNullAndEmptyArrays: true,
+          $addFields: {
+            departmentDetails: {
+              _id: '$submitterDetails.department',
+              title: '$submitterDetails.department',
+            },
           },
         },
         // Lookup reviews
@@ -357,9 +337,7 @@ class DecisionsController {
       if (faculty) {
         dataPipeline.push({
           $match: {
-            'facultyDetails._id': new mongoose.Types.ObjectId(
-              faculty as string
-            ),
+            'facultyDetails._id': faculty as string,
           },
         });
       }
@@ -448,11 +426,9 @@ class DecisionsController {
 
       const totalProposals = totalResult[0]?.total || 0;
       const averageScore =
-        statistics.scoredProposalsCount > 0
-          ? Math.round(
-              statistics.totalScoreSum / statistics.scoredProposalsCount
-            )
-          : 0;
+        statistics.scoredProposalsCount > 0 ? Math.round(
+          statistics.totalScoreSum / statistics.scoredProposalsCount
+        ) : 0;
 
       logger.info(
         `Admin ${user.id} retrieved proposals list for decision${
@@ -533,8 +509,7 @@ class DecisionsController {
       // Optionally update other fields if provided, e.g., from finalizeProposalDecision
       if (finalScore !== undefined) proposal.finalScore = finalScore;
       if (fundingAmount !== undefined) proposal.fundingAmount = fundingAmount;
-      if (feedbackComments !== undefined)
-        proposal.feedbackComments = feedbackComments;
+      if (feedbackComments !== undefined) proposal.feedbackComments = feedbackComments;
 
       await proposal.save();
 
@@ -565,10 +540,6 @@ class DecisionsController {
       const proposal = await Proposal.findById(proposalId).populate({
         path: 'submitter',
         select: 'email name faculty department',
-        populate: [
-          { path: 'faculty', select: 'title' },
-          { path: 'department', select: 'title' },
-        ],
       });
 
       if (!proposal) {
@@ -630,10 +601,6 @@ class DecisionsController {
       }).populate({
         path: 'submitter',
         select: 'name email faculty department',
-        populate: [
-          { path: 'faculty', select: 'title' },
-          { path: 'department', select: 'title' },
-        ],
       }); // Populate submitter details
 
       // Basic CSV generation (for demonstration)
@@ -644,9 +611,8 @@ class DecisionsController {
         const submitterUser = proposal.submitter as unknown as IUser; // Explicitly cast to IUser type
         const submitterName = submitterUser ? submitterUser.name : 'N/A';
         const submitterEmail = submitterUser ? submitterUser.email : 'N/A';
-        const facultyName = (submitterUser.faculty as any)?.title || 'N/A'; // Access title from populated faculty
-        const departmentName =
-          (submitterUser.department as any)?.title || 'N/A'; // Access title from populated department
+        const facultyName = (submitterUser.faculty as string) || 'N/A';
+        const departmentName = (submitterUser.department as string) || 'N/A';
 
         // eslint-disable-next-line max-len
         csvContent += `"${proposal.projectTitle}","${submitterName}","${submitterEmail}","${facultyName}","${departmentName}","${proposal.status || 'N/A'}",${proposal.finalScore || 'N/A'},${proposal.fundingAmount || 'N/A'},"${proposal.feedbackComments || 'N/A'}"\n`;

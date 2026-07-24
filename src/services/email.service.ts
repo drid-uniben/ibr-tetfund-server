@@ -13,7 +13,6 @@ import {
   reviewAssignmentTemplate,
   proposalNotificationTemplate,
   submissionConfirmationTemplate,
-  statusUpdateTemplate,
   reviewerInvitationTemplate,
   reviewerCredentialsTemplate,
   invitationTemplate,
@@ -63,7 +62,7 @@ class EmailService {
   }
 
   private getSubmitterTypeText(submitterType: SubmitterType): string {
-    return submitterType === 'staff' ? 'Staff Member' : "Master's Student";
+    return submitterType === 'staff' ? 'Staff Member' : 'Master\'s Student';
   }
 
   private getProposalStatusUpdateSubject(
@@ -187,9 +186,7 @@ class EmailService {
     isArchived: boolean,
     comment?: string
   ): Promise<void> {
-    const subject = isArchived
-      ? `Your Proposal "${projectTitle}" Has Been Archived`
-      : `Your Proposal "${projectTitle}" Has Been Unarchived`;
+    const subject = isArchived ? `Your Proposal "${projectTitle}" Has Been Archived` : `Your Proposal "${projectTitle}" Has Been Unarchived`;
     try {
       await this.transporter.sendMail({
         from: this.emailFrom,
@@ -224,9 +221,7 @@ class EmailService {
     const reviewUrl = `${this.frontendUrl}/admin/proposals`;
 
     // Handle comma-separated emails or single email
-    const recipients = Array.isArray(reviewerEmails)
-      ? reviewerEmails
-      : reviewerEmails.split(',').map((email) => email.trim());
+    const recipients = Array.isArray(reviewerEmails) ? reviewerEmails : reviewerEmails.split(',').map((email) => email.trim());
 
     try {
       await this.transporter.sendMail({
@@ -263,7 +258,7 @@ class EmailService {
       await this.transporter.sendMail({
         from: this.emailFrom,
         to: email,
-        subject: `Research Proposal Submission Confirmation`,
+        subject: 'Research Proposal Submission Confirmation',
         html: submissionConfirmationTemplate(
           name,
           proposalTitle,

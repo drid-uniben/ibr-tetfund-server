@@ -14,7 +14,6 @@ import { NotFoundError, BadRequestError } from '../../utils/customErrors';
 import logger from '../../utils/logger';
 import emailService from '../../services/email.service';
 import mongoose, { Document } from 'mongoose';
-import Faculty from '../../Proposal_Submission/models/faculty.model';
 
 interface IReviewerWithCounts extends IUser {
   _id: mongoose.Types.ObjectId; // Explicitly define _id type
@@ -144,28 +143,28 @@ class ReconciliationController {
   private keywordToFacultyMap: {
     [key: string]: keyof typeof ReconciliationController.prototype.clusterMap;
   } = {
-    Agriculture: 'Faculty of Agriculture',
-    'Life Sciences': 'Faculty of Life Sciences',
-    'Veterinary Medicine': 'Faculty of Veterinary Medicine',
-    Pharmacy: 'Faculty of Pharmacy',
-    Dentistry: 'Faculty of Dentistry',
-    Medicine: 'Faculty of Medicine',
-    'Basic Medical Sciences': 'Faculty of Basic Medical Sciences',
-    'Basic Clinical Sciences': 'School of Basic Clinical Sciences',
-    'Reproductive Health Innovation':
+      Agriculture: 'Faculty of Agriculture',
+      'Life Sciences': 'Faculty of Life Sciences',
+      'Veterinary Medicine': 'Faculty of Veterinary Medicine',
+      Pharmacy: 'Faculty of Pharmacy',
+      Dentistry: 'Faculty of Dentistry',
+      Medicine: 'Faculty of Medicine',
+      'Basic Medical Sciences': 'Faculty of Basic Medical Sciences',
+      'Basic Clinical Sciences': 'School of Basic Clinical Sciences',
+      'Reproductive Health Innovation':
       'Centre of Excellence in Reproductive Health Innovation',
-    'Child Health': 'Institute of Child Health',
-    'Management Sciences': 'Faculty of Management Sciences',
-    Education: 'Faculty of Education',
-    'Social Sciences': 'Faculty of Social Sciences',
-    'Vocational Education': 'Faculty of Vocational Education',
-    Law: 'Faculty of Law',
-    Arts: 'Faculty of Arts',
-    'Institute of Education': 'Institute of Education',
-    Engineering: 'Faculty of Engineering',
-    'Physical Sciences': 'Faculty of Physical Sciences',
-    'Environmental Sciences': 'Faculty of Environmental Sciences',
-  };
+      'Child Health': 'Institute of Child Health',
+      'Management Sciences': 'Faculty of Management Sciences',
+      Education: 'Faculty of Education',
+      'Social Sciences': 'Faculty of Social Sciences',
+      'Vocational Education': 'Faculty of Vocational Education',
+      Law: 'Faculty of Law',
+      Arts: 'Faculty of Arts',
+      'Institute of Education': 'Institute of Education',
+      Engineering: 'Faculty of Engineering',
+      'Physical Sciences': 'Faculty of Physical Sciences',
+      'Environmental Sciences': 'Faculty of Environmental Sciences',
+    };
 
   // Helper function to select a reviewer based on least workload, then randomization
   private selectReviewerByWorkload = (
@@ -237,7 +236,6 @@ class ReconciliationController {
     const proposal = await Proposal.findById(proposalId).populate({
       path: 'submitter',
       select: 'faculty',
-      populate: { path: 'faculty', select: 'title code' },
     });
 
     if (!proposal) {
@@ -262,9 +260,7 @@ class ReconciliationController {
       }
 
       const rawFacultyTitle =
-        typeof submitterFaculty === 'string'
-          ? submitterFaculty
-          : (submitterFaculty as any).title;
+        typeof submitterFaculty === 'string' ? submitterFaculty : (submitterFaculty as any).title;
 
       // Remove parenthetical codes and trim
       const cleanedFacultyTitle = rawFacultyTitle.split('(')[0].trim();
@@ -284,7 +280,7 @@ class ReconciliationController {
           `No canonical faculty title found for cleaned title: ${cleanedFacultyTitle}`
         );
         throw new BadRequestError(
-          "Cannot assign reconciliation: Could not determine a matching faculty for the proposal's cluster."
+          'Cannot assign reconciliation: Could not determine a matching faculty for the proposal\'s cluster.'
         );
       }
 
@@ -295,7 +291,7 @@ class ReconciliationController {
           `No eligible faculties found for ${canonicalFacultyTitle}`
         );
         throw new BadRequestError(
-          "Cannot assign reconciliation: No eligible faculties found for the proposal's cluster"
+          'Cannot assign reconciliation: No eligible faculties found for the proposal\'s cluster'
         );
       }
 
@@ -316,12 +312,6 @@ class ReconciliationController {
         .join('|');
       const facultyTitleRegex = new RegExp(regexPattern, 'i'); // Case-insensitive match
 
-      const facultyIds = (await Faculty.find({
-        title: { $regex: facultyTitleRegex },
-      }).select('_id')) as { _id: mongoose.Types.ObjectId }[]; // Get ObjectIds instead of codes
-
-      const facultyIdList = facultyIds.map((f) => f._id);
-
       logger.info(
         `Reconciliation: Cleaned Faculty Title: ${cleanedFacultyTitle}`
       );
@@ -333,20 +323,16 @@ class ReconciliationController {
           ', '
         )}`
       );
-      logger.info(
-        `Reconciliation: Faculty IDs for aggregation: ${facultyIdList.map(
-          (id) => id.toString()
-        )}`
-      );
 
       const MAX_REVIEWS_PER_REVIEWER = 10;
       let selectedReconciliationReviewer: IReviewerWithCounts | undefined;
 
       // Aggregation to find eligible reviewers for reconciliation
+      // faculty is a title string on the user (Option A) — match by regex.
       const allPossibleReviewers = await User.aggregate<IReviewerWithCounts>([
         {
           $match: {
-            faculty: { $in: facultyIdList },
+            faculty: { $regex: facultyTitleRegex },
             role: UserRole.REVIEWER,
             isActive: true,
             invitationStatus: { $in: ['accepted', 'added'] },
@@ -549,7 +535,7 @@ class ReconciliationController {
       regularReviews.length;
 
     // Final score: 60% reconciliation review + 40% average of regular reviews
-    const finalScore = reconciliationReview.totalScore * 0.6 + regularAvg * 0.4;
+    const finalScore = (reconciliationReview.totalScore * 0.6) + (regularAvg * 0.4);
 
     // Update proposal status
     const proposal = (await Proposal.findById(

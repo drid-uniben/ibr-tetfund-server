@@ -1,67 +1,40 @@
 import { Request, Response } from 'express';
-import Faculty from '../models/faculty.model';
-import logger from '../../utils/logger';
-import mongoose from 'mongoose';
+import {
+  academicUnits,
+  findUnitByCode,
+  getFacultyDepartmentData,
+} from '../../utils/facultyContent';
 
-interface IFacultyResponse {
-  msg?: string;
-  [key: string]: any;
-}
-
+/**
+ * Faculty (academic-unit) endpoints, served from the static canonical dataset
+ * in utils/facultyContent.ts — no database collection is involved, so the
+ * data can never drift or be orphaned by a re-seed.
+ */
 class FacultyController {
-  getFaculties = async (req: Request, res: Response<IFacultyResponse | any[]>): Promise<void> => {
-    try {
-      const faculties = await Faculty.find();
-      res.json(faculties);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      logger.error(`Error retrieving faculties: ${errorMessage}`);
-      res.status(500).send({ error: 'Server Error' });
-    }
+  // List all academic units (faculties/schools/colleges/centres/institutes).
+  getFaculties = (_req: Request, res: Response): void => {
+    res.json(
+      academicUnits.map((u) => ({
+        code: u.code,
+        title: u.title,
+        type: u.type,
+      }))
+    );
   };
 
-  // Get faculty by code
-  getFacultyByCode = async (req: Request<{ code: string }>, res: Response<IFacultyResponse>): Promise<void> => {
-    try {
-      const faculty = await Faculty.findOne({ code: req.params.code });
-
-      if (!faculty) {
-        logger.warn(`Faculty not found with code: ${req.params.code}`);
-        res.status(404).json({ msg: 'Faculty not found' });
-        return;
-      }
-
-      res.json(faculty);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      logger.error(`Error retrieving faculty by code: ${errorMessage}`);
-      res.status(500).send({ error: 'Server Error' });
-    }
+  // Full nested faculty -> departments structure (single fetch for forms).
+  getFacultyDepartmentData = (_req: Request, res: Response): void => {
+    res.json({ success: true, data: getFacultyDepartmentData() });
   };
 
-  getFacultyById = async (req: Request<{ id: string }>, res: Response<IFacultyResponse>): Promise<void> => {
-    try {
-      // Validate if the ID is a valid MongoDB ObjectId
-      if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-        logger.warn(`Invalid faculty ID format: ${req.params.id}`);
-        res.status(400).json({ msg: 'Invalid faculty ID format' });
-        return;
-      }
-
-      const faculty = await Faculty.findById(req.params.id);
-
-      if (!faculty) {
-        logger.warn(`Faculty not found with ID: ${req.params.id}`);
-        res.status(404).json({ msg: 'Faculty not found' });
-        return;
-      }
-
-      res.json(faculty);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      logger.error(`Error retrieving faculty by ID: ${errorMessage}`);
-      res.status(500).send({ error: 'Server Error' });
+  // Get a single unit (with its departments) by code.
+  getFacultyByCode = (req: Request<{ code: string }>, res: Response): void => {
+    const unit = findUnitByCode(req.params.code);
+    if (!unit) {
+      res.status(404).json({ msg: 'Faculty not found' });
+      return;
     }
+    res.json(unit);
   };
 }
 

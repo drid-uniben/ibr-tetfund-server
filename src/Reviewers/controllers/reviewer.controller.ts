@@ -3,8 +3,10 @@ import { Request, Response } from 'express';
 import crypto from 'crypto';
 import User, { UserRole } from '../../model/user.model';
 import Proposal from '../../Proposal_Submission/models/proposal.model';
-import Faculty from '../../Proposal_Submission/models/faculty.model';
-import Department from '../../Proposal_Submission/models/department.model';
+import {
+  isValidUnit,
+  isValidUnitDepartment,
+} from '../../utils/facultyContent';
 import Review, { ReviewStatus } from '../../Review_System/models/review.model';
 import emailService from '../../services/email.service';
 import {
@@ -16,12 +18,6 @@ import asyncHandler from '../../utils/asyncHandler';
 import logger from '../../utils/logger';
 import generateSecurePassword from '../../utils/passwordGenerator';
 import { Types } from 'mongoose';
-
-interface IReviewerQuery {
-  status?: string;
-  faculty?: string;
-  department?: string;
-}
 
 interface IPaginationOptions {
   page: number;
@@ -71,7 +67,7 @@ class ReviewerController {
       await User.create({
         email,
         inviteToken: hashedToken,
-        inviteTokenExpires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        inviteTokenExpires: new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)), // 30 days
         role: UserRole.REVIEWER,
         invitationStatus: 'pending',
         isActive: false,
@@ -97,8 +93,8 @@ class ReviewerController {
       const { token } = req.params;
       const {
         name,
-        facultyId,
-        departmentId,
+        faculty,
+        department,
         phoneNumber,
         academicTitle,
         alternativeEmail,
@@ -125,14 +121,11 @@ class ReviewerController {
         throw new BadRequestError('Invalid or expired invitation token');
       }
 
-      // Validate faculty and department
-      const faculty = await Faculty.findById(facultyId);
-      if (!faculty) {
+      // Validate faculty and department against the canonical dataset
+      if (!faculty || !isValidUnit(faculty)) {
         throw new BadRequestError('Invalid faculty selected');
       }
-
-      const department = await Department.findById(departmentId);
-      if (!department) {
+      if (!isValidUnitDepartment(faculty, department)) {
         throw new BadRequestError('Invalid department selected');
       }
 
@@ -141,8 +134,8 @@ class ReviewerController {
 
       // Update reviewer profile
       reviewer.name = name;
-      reviewer.faculty = faculty._id as unknown as Types.ObjectId;
-      reviewer.department = department._id as unknown as Types.ObjectId;
+      reviewer.faculty = faculty;
+      reviewer.department = department;
       reviewer.phoneNumber = phoneNumber;
       reviewer.academicTitle = academicTitle;
       reviewer.alternativeEmail = alternativeEmail;
@@ -184,8 +177,8 @@ class ReviewerController {
       const {
         email,
         name,
-        facultyId,
-        departmentId,
+        faculty,
+        department,
         phoneNumber,
         academicTitle,
         alternativeEmail,
@@ -204,14 +197,11 @@ class ReviewerController {
         throw new BadRequestError('Email already registered as a reviewer');
       }
 
-      // Validate faculty and department
-      const faculty = await Faculty.findById(facultyId);
-      if (!faculty) {
+      // Validate faculty and department against the canonical dataset
+      if (!faculty || !isValidUnit(faculty)) {
         throw new BadRequestError('Invalid faculty selected');
       }
-
-      const department = await Department.findById(departmentId);
-      if (!department) {
+      if (!isValidUnitDepartment(faculty, department)) {
         throw new BadRequestError('Invalid department selected');
       }
 
@@ -222,8 +212,8 @@ class ReviewerController {
       const newReviewer = await User.create({
         email,
         name,
-        faculty: faculty._id as unknown as Types.ObjectId,
-        department: department._id as unknown as Types.ObjectId,
+        faculty,
+        department,
         phoneNumber,
         academicTitle,
         alternativeEmail,
@@ -301,8 +291,6 @@ class ReviewerController {
         .sort(sortObj)
         .skip((options.page - 1) * options.limit)
         .limit(options.limit)
-        .populate('faculty', 'title code')
-        .populate('department', 'title code')
         .populate({
           path: 'assignedProposals',
           select: 'projectTitle submitter', // Select relevant fields from Proposal
@@ -331,12 +319,10 @@ class ReviewerController {
 
           // Calculate completion rate
           const completionRate =
-            assignedReviewsCount > 0
-              ? Math.round((completedReviewsCount / assignedReviewsCount) * 100)
-              : 0;
+            assignedReviewsCount > 0 ? Math.round((completedReviewsCount / assignedReviewsCount) * 100) : 0;
 
           // Fetch all reviews assigned to this reviewer
-          const allAssignedReviews = await Review.find({
+          await Review.find({
             reviewer: reviewer._id,
             reviewType: { $ne: 'ai' }, // Exclude AI reviews if necessary
           }).populate('proposal', 'projectTitle submitterType'); // Populate proposal details for each review
@@ -382,9 +368,7 @@ class ReviewerController {
       const reviewer = await User.findOne({
         _id: id,
         role: UserRole.REVIEWER,
-      })
-        .populate('faculty', 'title code')
-        .populate('department', 'title code');
+      });
       if (!reviewer) {
         throw new NotFoundError('Reviewer not found');
       }
@@ -504,9 +488,7 @@ class ReviewerController {
         email: invitation.email,
         status: invitation.invitationStatus,
         created: invitation.createdAt.toISOString().split('T')[0],
-        expires: invitation.inviteTokenExpires
-          ? invitation.inviteTokenExpires.toISOString().split('T')[0]
-          : null,
+        expires: invitation.inviteTokenExpires ? invitation.inviteTokenExpires.toISOString().split('T')[0] : null,
       }));
 
       logger.info(`Admin ${user._id} retrieved reviewer invitations list`);
@@ -552,7 +534,7 @@ class ReviewerController {
       // Update reviewer with new token
       reviewer.inviteToken = hashedToken;
       reviewer.inviteTokenExpires = new Date(
-        Date.now() + 30 * 24 * 60 * 60 * 1000
+        Date.now() + (30 * 24 * 60 * 60 * 1000)
       ); // 30 days
 
       await reviewer.save();
@@ -593,8 +575,6 @@ class ReviewerController {
         _id: { $in: reviewer.assignedProposals },
       })
         .populate('submitter', 'name email')
-        .populate('faculty', 'name code')
-        .populate('department', 'name code')
         .select('-docFile -cvFile');
 
       // Get completed reviews

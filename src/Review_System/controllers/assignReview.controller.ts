@@ -9,7 +9,6 @@ import Review, {
   ReviewType,
   IReview,
 } from '../models/review.model';
-import Faculty from '../../Proposal_Submission/models/faculty.model';
 import asyncHandler from '../../utils/asyncHandler';
 import logger from '../../utils/logger';
 import emailService from '../../services/email.service';
@@ -62,10 +61,6 @@ class AssignReviewController {
       const proposal = await Proposal.findById(proposalId).populate({
         path: 'submitter',
         select: 'faculty department',
-        populate: [
-          { path: 'faculty', select: 'title code' },
-          { path: 'department', select: 'title code' },
-        ],
       });
 
       if (!proposal) {
@@ -233,9 +228,7 @@ class AssignReviewController {
       };
 
       const rawFacultyTitle =
-        typeof submitterFaculty === 'string'
-          ? submitterFaculty
-          : (submitterFaculty as any).title;
+        typeof submitterFaculty === 'string' ? submitterFaculty : (submitterFaculty as any).title;
 
       // Remove parenthetical codes and trim
       const cleanedFacultyTitle = rawFacultyTitle.split('(')[0].trim();
@@ -259,7 +252,7 @@ class AssignReviewController {
         res.status(400).json({
           success: false,
           message:
-            "Cannot assign reviewers: Could not determine a matching faculty for the proposal's cluster.",
+            'Cannot assign reviewers: Could not determine a matching faculty for the proposal\'s cluster.',
         });
         return;
       }
@@ -281,7 +274,7 @@ class AssignReviewController {
         res.status(400).json({
           success: false,
           message:
-            "Cannot assign reviewers: No eligible faculties found for the proposal's cluster",
+            'Cannot assign reviewers: No eligible faculties found for the proposal\'s cluster',
         });
         return;
       }
@@ -303,25 +296,13 @@ class AssignReviewController {
         .join('|');
       const facultyTitleRegex = new RegExp(regexPattern, 'i'); // Case-insensitive match
 
-      const facultyIds = (await Faculty.find({
-        title: { $regex: facultyTitleRegex },
-      }).select('_id')) as { _id: Types.ObjectId }[]; // Get ObjectIds instead of codes
-
-      logger.info(
-        `Faculty IDs found for eligible faculties: ${JSON.stringify(facultyIds)}`
-      );
-
-      const facultyIdList = facultyIds.map((f) => f._id);
-
-      logger.info(
-        `Faculty ID list for matching: ${JSON.stringify(facultyIdList)}`
-      );
-
+      // faculty is stored as a title string on the user (Option A) — match
+      // reviewers directly by the eligible-faculty regex, no id translation.
       // Find eligible reviewers and sort by current workload with better distribution
       const eligibleReviewers = await User.aggregate<IReviewerWithCounts>([
         {
           $match: {
-            faculty: { $in: facultyIdList },
+            faculty: { $regex: facultyTitleRegex },
             role: UserRole.REVIEWER,
             isActive: true,
             invitationStatus: { $in: ['accepted', 'added'] },
@@ -456,7 +437,7 @@ class AssignReviewController {
         dueDate,
       });
 
-      const savedReview = await review.save();
+      await review.save();
       logger.info(
         `Assigned proposal ${proposalId} to human reviewer ${selectedReviewer._id}`
       );
@@ -497,13 +478,13 @@ class AssignReviewController {
       }
 
       logger.info(
-        // eslint-disable-next-line max-len
+         
         `Assigned proposal ${proposalId} to 1 human reviewer and dispatched AI review job`
       );
 
       res.status(200).json({
         success: true,
-        message: `Proposal assigned to 1 reviewer successfully`,
+        message: 'Proposal assigned to 1 reviewer successfully',
         data: {
           reviewer: {
             id: selectedReviewer._id,

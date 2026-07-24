@@ -61,8 +61,8 @@ export const generateAIReviewForProposal = async (
     };
   } catch (error: any) {
     await agenda.now('generate AI review', {
-          proposalId: proposalId,
-        });
+      proposalId: proposalId,
+    });
     logger.info(
       `Dispatched failed AI review job for proposal ${proposalId} to Agenda`
     );

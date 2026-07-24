@@ -86,34 +86,18 @@ class ProposalReviewsController {
         {
           $unwind: '$submitterDetails',
         },
-        // Populate faculty details
+        // faculty/department are title strings on the user (Option A);
+        // synthesize the previous *Details shapes so downstream is unchanged.
         {
-          $lookup: {
-            from: 'faculties',
-            localField: 'submitterDetails.faculty',
-            foreignField: '_id',
-            as: 'facultyDetails',
-          },
-        },
-        {
-          $unwind: {
-            path: '$facultyDetails',
-            preserveNullAndEmptyArrays: true,
-          },
-        },
-        // Populate department details
-        {
-          $lookup: {
-            from: 'departments',
-            localField: 'submitterDetails.department',
-            foreignField: '_id',
-            as: 'departmentDetails',
-          },
-        },
-        {
-          $unwind: {
-            path: '$departmentDetails',
-            preserveNullAndEmptyArrays: true,
+          $addFields: {
+            facultyDetails: {
+              _id: '$submitterDetails.faculty',
+              title: '$submitterDetails.faculty',
+            },
+            departmentDetails: {
+              _id: '$submitterDetails.department',
+              title: '$submitterDetails.department',
+            },
           },
         },
         // Add computed fields
@@ -382,11 +366,7 @@ class ProposalReviewsController {
       const proposal = await Proposal.findById(proposalId)
         .populate({
           path: 'submitter',
-          select: 'name email academicTitle',
-          populate: [
-            { path: 'faculty', select: 'title code' },
-            { path: 'department', select: 'title code' },
-          ],
+          select: 'name email academicTitle faculty department',
         })
         .select(
           'projectTitle submitterType status reviewStatus createdAt updatedAt'
@@ -400,11 +380,7 @@ class ProposalReviewsController {
       const reviews = await Review.find({ proposal: proposalId })
         .populate({
           path: 'reviewer',
-          select: 'name email academicTitle',
-          populate: [
-            { path: 'faculty', select: 'title code' },
-            { path: 'department', select: 'title code' },
-          ],
+          select: 'name email academicTitle faculty department',
         })
         .sort({ createdAt: 1 }); // Chronological order
 
@@ -560,15 +536,13 @@ class ProposalReviewsController {
       dueDate: review.dueDate,
       completedAt: review.completedAt,
       createdAt: review.createdAt,
-      reviewer: review.reviewer
-        ? {
-            name: review.reviewer.name,
-            email: review.reviewer.email,
-            academicTitle: review.reviewer.academicTitle,
-            faculty: review.reviewer.faculty,
-            department: review.reviewer.department,
-          }
-        : null, // AI reviews don't have reviewers
+      reviewer: review.reviewer ? {
+        name: review.reviewer.name,
+        email: review.reviewer.email,
+        academicTitle: review.reviewer.academicTitle,
+        faculty: review.reviewer.faculty,
+        department: review.reviewer.department,
+      } : null, // AI reviews don't have reviewers
     };
   };
 
@@ -708,9 +682,7 @@ class ProposalReviewsController {
           inReconciliation,
           withDiscrepancy,
           completionRate:
-            totalWithReviews > 0
-              ? Math.round((reviewed / totalWithReviews) * 100)
-              : 0,
+            totalWithReviews > 0 ? Math.round((reviewed / totalWithReviews) * 100) : 0,
         },
       });
     }
