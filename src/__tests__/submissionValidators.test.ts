@@ -60,23 +60,13 @@ describe('staffProposalSchema', () => {
 });
 
 describe('masterStudentProposalSchema', () => {
+  // The master-student form/controller only ever submits these fields
+  // (fullName, email, alternativeEmail, phoneNumber) plus a docFile
+  // upload — see submit.controller.ts#submitMasterStudentProposal.
   const validMasterBody = {
     fullName: 'Grace Hopper',
-    matricNumber: 'PG/2024/001',
-    programme: 'MSc Computer Science',
-    faculty: 'Faculty of Physical Sciences',
-    department: 'Department of Computer Science',
     email: 'grace@physci.uniben.edu',
     phoneNumber: '08087654321',
-    projectTitle: 'Compilers for the masses',
-    problemStatement: 'The problem statement is described here.',
-    objectivesOutcomes: 'The objectives and outcomes are described.',
-    researchApproach: 'The research approach is described here.',
-    innovationNovelty: 'The innovation novelty is described here.',
-    innovationContribution: 'The innovation contribution is described.',
-    interdisciplinaryRelevance: 'The interdisciplinary relevance here.',
-    implementationPlan: 'The implementation plan is described here.',
-    estimatedBudget: 250000,
   };
 
   it('accepts a valid master-student submission', () => {
@@ -86,10 +76,23 @@ describe('masterStudentProposalSchema', () => {
     expect(result.success).toBe(true);
   });
 
-  it('rejects an invalid faculty', () => {
+  it('accepts an optional alternativeEmail', () => {
     const result = masterStudentProposalSchema.safeParse({
-      body: { ...validMasterBody, faculty: 'Not A Faculty' },
+      body: { ...validMasterBody, alternativeEmail: 'grace@gmail.com' },
     });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects a non-UNIBEN email', () => {
+    const result = masterStudentProposalSchema.safeParse({
+      body: { ...validMasterBody, email: 'grace@gmail.com' },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a missing fullName', () => {
+    const { fullName: _fullName, ...rest } = validMasterBody;
+    const result = masterStudentProposalSchema.safeParse({ body: rest });
     expect(result.success).toBe(false);
   });
 });

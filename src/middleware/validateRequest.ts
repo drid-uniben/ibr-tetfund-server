@@ -4,9 +4,9 @@ import logger from '../utils/logger';
 import { BadRequestError } from '../utils/customErrors';
 
 type RequestValidationSchema = ZodObject<{
-  body?: ZodObject<any>;
-  query?: ZodObject<any>;
-  params?: ZodObject<any>;
+  body?: z.ZodTypeAny;
+  query?: z.ZodTypeAny;
+  params?: z.ZodTypeAny;
 }>;
 
 export type ValidatedRequest<T extends RequestValidationSchema> = Request & {

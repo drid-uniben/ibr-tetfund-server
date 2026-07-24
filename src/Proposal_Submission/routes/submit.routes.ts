@@ -3,19 +3,14 @@ import submitController from '../controllers/submit.controller';
 import multer, { FileFilterCallback } from 'multer';
 import path from 'path';
 import { rateLimiter } from '../../middleware/auth.middleware';
+import { getUploadsDir as getUploadsPath } from '../../utils/uploadsPath';
+import { validateRequest } from '../../middleware/validateRequest';
+import {
+  staffProposalSchema,
+  masterStudentProposalSchema,
+} from '../../validators/submission.validators';
 
 const router = Router();
-
-const getUploadsPath = (): string => {
-  if (process.env.NODE_ENV === 'production') {
-    // In production, __dirname is dist/Proposal_Submission/routes/
-    // Go up to dist/ and then to uploads/documents
-    return path.join(__dirname, '..', '..', 'uploads', 'documents');
-  } else {
-    // In development, use the existing path
-    return path.join(process.cwd(), 'src', 'uploads', 'documents');
-  }
-};
 
 // Configure multer for file uploads
 export const storage = multer.diskStorage({
@@ -65,7 +60,7 @@ export const fileFilter = (
 
 export const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
   fileFilter,
 });
 
@@ -78,10 +73,14 @@ const documentUpload = upload.fields([
 const submissionRateLimiter = rateLimiter(10, 60 * 60 * 1000); // 10 requests per hour
 
 // Staff proposal submission route
+// NOTE: validateRequest runs after documentUpload (multer) so it validates
+// req.body once multer has populated the text fields from the multipart
+// payload.
 router.post(
   '/staff-proposal',
   submissionRateLimiter,
   documentUpload,
+  validateRequest(staffProposalSchema),
   submitController.submitStaffProposal
 );
 
@@ -90,6 +89,7 @@ router.post(
   '/master-proposal',
   submissionRateLimiter,
   documentUpload,
+  validateRequest(masterStudentProposalSchema),
   submitController.submitMasterStudentProposal
 );
 

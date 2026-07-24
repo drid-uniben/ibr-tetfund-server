@@ -3,16 +3,9 @@ import submitFullProposalController from '../controllers/submitFullProposal.cont
 import multer, { FileFilterCallback } from 'multer';
 import path from 'path';
 import { rateLimiter } from '../../middleware/auth.middleware';
+import { getUploadsDir as getUploadsPath } from '../../utils/uploadsPath';
 
 const router = Router();
-
-const getUploadsPath = (): string => {
-  if (process.env.NODE_ENV === 'production') {
-    return path.join(__dirname, '..', '..', 'uploads', 'documents');
-  } else {
-    return path.join(process.cwd(), 'src', 'uploads', 'documents');
-  }
-};
 
 // Configure multer for full proposal and final submissiondocument uploads
 const storage = multer.diskStorage({
