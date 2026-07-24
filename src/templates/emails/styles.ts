@@ -2,15 +2,16 @@ export const commonStyles = `
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     line-height: 1.6;
-    color: #333333;
+    color: #2b1229;
     max-width: 600px;
     margin: 0 auto;
     padding: 20px;
-    background-color: #f9f9f9;
+    background-color: #faf7fc;
 }
 .header {
-    color: #AA319A;
-    border-bottom: 2px solid #AA319A;
+    font-family: Georgia, 'Times New Roman', serif;
+    color: #6d035c;
+    border-bottom: 2px solid #6d035c;
     padding-bottom: 10px;
     margin-bottom: 20px;
 }
@@ -21,17 +22,18 @@ body {
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 .proposal-title {
+    font-family: Georgia, 'Times New Roman', serif;
     font-size: 18px;
-    color: #AA319A;
+    color: #6d035c;
     padding: 10px;
-    background-color: #f8e0f5;
-    border-left: 3px solid #AA319A;
+    background-color: #f3e8f2;
+    border-left: 3px solid #b8860b;
     margin: 15px 0;
 }
 .button {
     display: inline-block;
     padding: 10px 20px;
-    background-color: #AA319A;
+    background-color: #6d035c;
     color: white !important;
     text-decoration: none;
     border-radius: 4px;
@@ -41,15 +43,15 @@ body {
 .footer {
     margin-top: 30px;
     padding-top: 15px;
-    border-top: 1px solid #e0e0e0;
+    border-top: 1px solid #ecdfec;
     font-size: 14px;
-    color: #666666;
+    color: #6b5567;
     text-align: center;
 }
 .credentials {
-    background-color: #f8e0f5;
+    background-color: #f3e8f2;
     padding: 15px;
-    border-left: 3px solid #AA319A;
+    border-left: 3px solid #b8860b;
     margin: 15px 0;
 }`;
 
@@ -63,14 +65,15 @@ export const submissionConfirmationStyles = `
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     line-height: 1.6;
-    color: #333333;
+    color: #2b1229;
     max-width: 600px;
     margin: 0 auto;
     padding: 20px;
 }
 .header {
-    color: #AA319A;
-    border-bottom: 2px solid #AA319A;
+    font-family: Georgia, 'Times New Roman', serif;
+    color: #6d035c;
+    border-bottom: 2px solid #6d035c;
     padding-bottom: 10px;
     margin-bottom: 20px;
 }
@@ -80,12 +83,13 @@ body {
 .footer {
     margin-top: 30px;
     padding-top: 15px;
-    border-top: 1px solid #e0e0e0;
+    border-top: 1px solid #ecdfec;
     font-size: 14px;
-    color: #666666;
+    color: #6b5567;
 }
 .highlight {
-    color: #AA319A;
+    font-family: Georgia, 'Times New Roman', serif;
+    color: #6d035c;
     font-weight: bold;
 }`;
 
@@ -101,15 +105,16 @@ export const statusUpdateStyles = `
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     line-height: 1.6;
-    color: #333333;
+    color: #2b1229;
     max-width: 600px;
     margin: 0 auto;
     padding: 20px;
-    background-color: #f9f9f9;
+    background-color: #faf7fc;
 }
 h1 {
-    color: #AA319A;
-    border-bottom: 2px solid #AA319A;
+    font-family: Georgia, 'Times New Roman', serif;
+    color: #6d035c;
+    border-bottom: 2px solid #6d035c;
     padding-bottom: 10px;
     margin-bottom: 20px;
 }
@@ -117,12 +122,12 @@ p {
     margin: 10px 0;
 }
 strong {
-    color: #AA319A;
+    color: #6d035c;
 }
 a {
     display: inline-block;
     padding: 10px 20px;
-    background-color: #AA319A;
+    background-color: #6d035c;
     color: white;
     text-decoration: none;
     border-radius: 4px;

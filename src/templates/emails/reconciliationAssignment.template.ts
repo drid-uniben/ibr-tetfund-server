@@ -27,11 +27,11 @@ export const reconciliationAssignmentTemplate = (
             background-color: #f2f2f2;
         }
         .discrepancy-notice {
-            color: #8B008B;
+            color: #6d035c;
             font-weight: bold;
             padding: 10px;
-            background-color: #f8e0f5;
-            border-left: 3px solid #AA319A;
+            background-color: #f3e8f2;
+            border-left: 3px solid #b8860b;
             margin: 15px 0;
         }
     </style>
