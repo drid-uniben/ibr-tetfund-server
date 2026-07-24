@@ -17,9 +17,10 @@
  * Safe to re-run: it only touches users whose faculty/department is still an
  * ObjectId (already-migrated string values are skipped).
  *
- * Usage:  ts-node src/scripts/migrateFacultyDepartmentToNames.ts
+ * Usage:  npm run migrate:faculty
  */
 import mongoose from 'mongoose';
+import type { Db } from 'mongodb';
 import dotenv from 'dotenv';
 import logger from '../utils/logger';
 import { isValidUnit, findUnitByTitle } from '../utils/facultyContent';
@@ -31,17 +32,17 @@ interface TitledDoc {
   title?: string;
 }
 
-async function migrate(): Promise<void> {
-  const uri = process.env.MONGODB_URI;
-  if (!uri) throw new Error('MONGODB_URI environment variable is not set.');
+export interface MigrationResult {
+  scanned: number;
+  updated: number;
+  warnings: string[];
+}
 
-  await mongoose.connect(uri);
-  logger.info('[migrate] Connected to database');
-
-  const db = mongoose.connection.db;
-  if (!db) throw new Error('Database handle unavailable after connect.');
-
-  // Build id -> title lookups from the OLD collections via the raw driver.
+/**
+ * Core migration logic, exported so it can be unit-tested against an
+ * in-memory database. Operates on an already-connected Db handle.
+ */
+export async function migrateFacultyDepartment(db: Db): Promise<MigrationResult> {
   const faculties = (await db
     .collection('faculties')
     .find({})
@@ -52,10 +53,12 @@ async function migrate(): Promise<void> {
     .toArray()) as unknown as TitledDoc[];
 
   const facultyTitleById = new Map<string, string>();
-  for (const f of faculties) if (f.title) facultyTitleById.set(String(f._id), f.title);
+  for (const f of faculties)
+    if (f.title) facultyTitleById.set(String(f._id), f.title);
 
   const departmentTitleById = new Map<string, string>();
-  for (const d of departments) if (d.title) departmentTitleById.set(String(d._id), d.title);
+  for (const d of departments)
+    if (d.title) departmentTitleById.set(String(d._id), d.title);
 
   logger.info(
     `[migrate] Loaded ${facultyTitleById.size} faculties and ${departmentTitleById.size} departments from old collections`
@@ -96,11 +99,10 @@ async function migrate(): Promise<void> {
       const title = departmentTitleById.get(id);
       if (title) {
         set.department = title;
-        // Verify the department belongs to a canonical unit somewhere.
-        const belongs = !!findUnitByTitle(String(set.faculty ?? user.faculty))
-          ?.departments.some(
-            (d) => d.title.toLowerCase() === title.toLowerCase()
-          );
+        const parentTitle = String(set.faculty ?? user.faculty);
+        const belongs = !!findUnitByTitle(parentTitle)?.departments.some(
+          (d) => d.title.toLowerCase() === title.toLowerCase()
+        );
         if (!belongs) {
           warnings.push(
             `User ${user._id}: department title "${title}" not matched under its faculty in canonical dataset`
@@ -119,24 +121,40 @@ async function migrate(): Promise<void> {
     }
   }
 
-  logger.info(
-    `[migrate] Done. Scanned ${scanned} users, updated ${updated}.`
-  );
+  logger.info(`[migrate] Done. Scanned ${scanned} users, updated ${updated}.`);
   if (warnings.length > 0) {
     logger.warn(`[migrate] ${warnings.length} warning(s) to reconcile:`);
     for (const w of warnings) logger.warn(`  - ${w}`);
   } else {
     logger.info('[migrate] No mismatches — all titles matched the dataset.');
   }
+
+  return { scanned, updated, warnings };
 }
 
-migrate()
-  .then(async () => {
-    await mongoose.disconnect();
-    process.exit(0);
-  })
-  .catch(async (error) => {
-    logger.error('[migrate] Migration failed:', error);
-    await mongoose.disconnect();
-    process.exit(1);
-  });
+async function main(): Promise<void> {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) throw new Error('MONGODB_URI environment variable is not set.');
+
+  await mongoose.connect(uri);
+  logger.info('[migrate] Connected to database');
+
+  const db = mongoose.connection.db;
+  if (!db) throw new Error('Database handle unavailable after connect.');
+
+  await migrateFacultyDepartment(db);
+}
+
+// Only run automatically when invoked directly (not when imported by a test).
+if (require.main === module) {
+  main()
+    .then(async () => {
+      await mongoose.disconnect();
+      process.exit(0);
+    })
+    .catch(async (error) => {
+      logger.error('[migrate] Migration failed:', error);
+      await mongoose.disconnect();
+      process.exit(1);
+    });
+}
