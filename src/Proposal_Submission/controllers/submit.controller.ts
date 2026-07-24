@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import User from '../../model/user.model';
 import Proposal, { SubmitterType } from '../models/proposal.model';
 import { NotFoundError } from '../../utils/customErrors';
+import { isValidUnit, isValidUnitDepartment } from '../../utils/facultyContent';
 import asyncHandler from '../../utils/asyncHandler';
 import logger from '../../utils/logger';
 import emailService from '../../services/email.service';
@@ -77,9 +78,7 @@ class SubmitController {
       if (coInvestigators) {
         try {
           parsedCoInvestigators =
-            typeof coInvestigators === 'string'
-              ? (JSON.parse(coInvestigators) as ICoInvestigator[])
-              : (coInvestigators as ICoInvestigator[]);
+            typeof coInvestigators === 'string' ? (JSON.parse(coInvestigators) as ICoInvestigator[]) : (coInvestigators as ICoInvestigator[]);
         } catch (error) {
           logger.error(
             'Failed to parse coInvestigators:',
@@ -88,6 +87,23 @@ class SubmitController {
           // Default to empty array if parsing fails
           parsedCoInvestigators = [];
         }
+      }
+
+      // Validate faculty/department against the canonical dataset (stored as
+      // human-readable titles, not ObjectIds — see utils/facultyContent.ts).
+      if (!faculty || !isValidUnit(faculty)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid faculty selected',
+        });
+        return;
+      }
+      if (!isValidUnitDepartment(faculty, department)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid department selected for the chosen faculty',
+        });
+        return;
       }
 
       // Check if user already exists or create new user
@@ -281,15 +297,10 @@ class SubmitController {
     async (req: Request, res: Response<IProposalResponse>): Promise<void> => {
       const { id } = req.params as { id: string };
 
-      const proposal = await Proposal.findById(id)
-        .populate('submitter', 'name email academicTitle')
-        .populate({
-          path: 'submitter',
-          populate: [
-            { path: 'faculty', select: 'title code' },
-            { path: 'department', select: 'title code' },
-          ],
-        });
+      const proposal = await Proposal.findById(id).populate(
+        'submitter',
+        'name email academicTitle faculty department'
+      );
 
       if (!proposal) {
         throw new NotFoundError('Proposal not found');

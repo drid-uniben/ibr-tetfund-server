@@ -5,8 +5,6 @@ import Proposal, {
   ProposalStatus,
 } from '../../Proposal_Submission/models/proposal.model';
 import Review, { ReviewStatus, ReviewType } from '../models/review.model';
-import Faculty from '../../Proposal_Submission/models/faculty.model';
-import Department from '../../Proposal_Submission/models/department.model';
 import asyncHandler from '../../utils/asyncHandler';
 import logger from '../../utils/logger';
 import emailService from '../../services/email.service';
@@ -32,11 +30,6 @@ interface IEligibleReviewersResponse {
       cluster: string[];
     };
   };
-}
-
-interface FacultyDocument {
-  _id: string;
-  title: string;
 }
 
 class ReassignReviewController {
@@ -160,28 +153,28 @@ class ReassignReviewController {
   private keywordToFacultyMap: {
     [key: string]: keyof typeof ReassignReviewController.prototype.clusterMap;
   } = {
-    Agriculture: 'Faculty of Agriculture',
-    'Life Sciences': 'Faculty of Life Sciences',
-    'Veterinary Medicine': 'Faculty of Veterinary Medicine',
-    Pharmacy: 'Faculty of Pharmacy',
-    Dentistry: 'Faculty of Dentistry',
-    Medicine: 'Faculty of Medicine',
-    'Basic Medical Sciences': 'Faculty of Basic Medical Sciences',
-    'Basic Clinical Sciences': 'School of Basic Clinical Sciences',
-    'Reproductive Health Innovation':
+      Agriculture: 'Faculty of Agriculture',
+      'Life Sciences': 'Faculty of Life Sciences',
+      'Veterinary Medicine': 'Faculty of Veterinary Medicine',
+      Pharmacy: 'Faculty of Pharmacy',
+      Dentistry: 'Faculty of Dentistry',
+      Medicine: 'Faculty of Medicine',
+      'Basic Medical Sciences': 'Faculty of Basic Medical Sciences',
+      'Basic Clinical Sciences': 'School of Basic Clinical Sciences',
+      'Reproductive Health Innovation':
       'Centre of Excellence in Reproductive Health Innovation',
-    'Child Health': 'Institute of Child Health',
-    'Management Sciences': 'Faculty of Management Sciences',
-    Education: 'Faculty of Education',
-    'Social Sciences': 'Faculty of Social Sciences',
-    'Vocational Education': 'Faculty of Vocational Education',
-    Law: 'Faculty of Law',
-    Arts: 'Faculty of Arts',
-    'Institute of Education': 'Institute of Education',
-    Engineering: 'Faculty of Engineering',
-    'Physical Sciences': 'Faculty of Physical Sciences',
-    'Environmental Sciences': 'Faculty of Environmental Sciences',
-  };
+      'Child Health': 'Institute of Child Health',
+      'Management Sciences': 'Faculty of Management Sciences',
+      Education: 'Faculty of Education',
+      'Social Sciences': 'Faculty of Social Sciences',
+      'Vocational Education': 'Faculty of Vocational Education',
+      Law: 'Faculty of Law',
+      Arts: 'Faculty of Arts',
+      'Institute of Education': 'Institute of Education',
+      Engineering: 'Faculty of Engineering',
+      'Physical Sciences': 'Faculty of Physical Sciences',
+      'Environmental Sciences': 'Faculty of Environmental Sciences',
+    };
 
   // Reassign regular review to another reviewer
   // Updated reassignRegularReview method
@@ -201,7 +194,6 @@ class ReassignReviewController {
       const proposal = await Proposal.findById(proposalId).populate({
         path: 'submitter',
         select: 'faculty',
-        populate: { path: 'faculty', select: 'title code' },
       });
 
       if (!proposal) {
@@ -366,7 +358,6 @@ class ReassignReviewController {
       const proposal = await Proposal.findById(proposalId).populate({
         path: 'submitter',
         select: 'faculty',
-        populate: { path: 'faculty', select: 'title code' },
       });
 
       if (!proposal) {
@@ -702,7 +693,7 @@ class ReassignReviewController {
 
   // Helper method to check if reviewer is in the same cluster
   private async isReviewerInSameCluster(
-    reviewerFacultyId: Types.ObjectId,
+    reviewerFacultyTitle: string,
     proposal: any
   ): Promise<boolean> {
     const submitterFaculty = (proposal.submitter as any).faculty;
@@ -712,12 +703,10 @@ class ReassignReviewController {
     }
 
     const rawFacultyTitle =
-      typeof submitterFaculty === 'string'
-        ? submitterFaculty
-        : (submitterFaculty as any).title;
+      typeof submitterFaculty === 'string' ? submitterFaculty : (submitterFaculty as any).title;
 
     logger.info(
-      `Comparing reviewer faculty ${reviewerFacultyId} with submitter faculty: ${rawFacultyTitle}`
+      `Comparing reviewer faculty ${reviewerFacultyTitle} with submitter faculty: ${rawFacultyTitle}`
     );
 
     // Remove parenthetical codes and trim
@@ -772,24 +761,13 @@ class ReassignReviewController {
 
     logger.info(`Faculty title regex pattern: ${regexPattern}`);
 
-    const facultyIds = (await Faculty.find({
-      title: { $regex: facultyTitleRegex },
-    }).select('_id title')) as FacultyDocument[];
-
+    // reviewer.faculty is a title string (Option A) — test it against the
+    // eligible-faculty regex directly, no id translation needed.
+    const cleanedReviewerTitle = reviewerFacultyTitle.split('(')[0].trim();
+    const isEligible = facultyTitleRegex.test(cleanedReviewerTitle);
     logger.info(
-      `Found ${facultyIds.length} matching faculties: ${JSON.stringify(facultyIds.map((f) => ({ id: f._id, title: f.title })))}`
+      `Checking reviewer faculty "${cleanedReviewerTitle}" against eligible regex: ${isEligible}`
     );
-
-    // Convert both to strings for comparison
-    const facultyIdStrings = facultyIds.map((f) => f._id.toString());
-    const reviewerFacultyIdString = reviewerFacultyId.toString();
-
-    logger.info(
-      `Checking if reviewer faculty ID ${reviewerFacultyIdString} is in eligible list: ${JSON.stringify(facultyIdStrings)}`
-    );
-
-    const isEligible = facultyIdStrings.includes(reviewerFacultyIdString);
-    logger.info(`Reviewer cluster eligibility result: ${isEligible}`);
 
     return isEligible;
   }
@@ -805,9 +783,7 @@ class ReassignReviewController {
     }
 
     const rawFacultyTitle =
-      typeof submitterFaculty === 'string'
-        ? submitterFaculty
-        : (submitterFaculty as any).title;
+      typeof submitterFaculty === 'string' ? submitterFaculty : (submitterFaculty as any).title;
 
     // Remove parenthetical codes and trim
     const cleanedFacultyTitle = rawFacultyTitle.split('(')[0].trim();
@@ -845,22 +821,17 @@ class ReassignReviewController {
       .join('|');
     const facultyTitleRegex = new RegExp(regexPattern, 'i');
 
-    const facultyIds = (await Faculty.find({
-      title: { $regex: facultyTitleRegex },
-    }).select('_id')) as { _id: Types.ObjectId }[];
-
-    const facultyIdList = facultyIds.map((f) => f._id);
-
     // Get existing reviewers for this proposal
     const existingReviewerIds = await Review.find({
       proposal: proposalId,
     }).distinct('reviewer');
 
+    // faculty is a title string on the user (Option A) — match by regex.
     // Find eligible reviewers with comprehensive workload tracking
     const eligibleReviewers = await User.aggregate([
       {
         $match: {
-          faculty: { $in: facultyIdList },
+          faculty: { $regex: facultyTitleRegex },
           role: UserRole.REVIEWER,
           isActive: true,
           invitationStatus: { $in: ['accepted', 'added'] },
@@ -971,9 +942,7 @@ class ReassignReviewController {
     }
 
     const rawFacultyTitle =
-      typeof submitterFaculty === 'string'
-        ? submitterFaculty
-        : (submitterFaculty as any).title;
+      typeof submitterFaculty === 'string' ? submitterFaculty : (submitterFaculty as any).title;
 
     // Remove parenthetical codes and trim
     const cleanedFacultyTitle = rawFacultyTitle.split('(')[0].trim();
@@ -1011,23 +980,18 @@ class ReassignReviewController {
       .join('|');
     const facultyTitleRegex = new RegExp(regexPattern, 'i');
 
-    const facultyIds = await Faculty.find({
-      title: { $regex: facultyTitleRegex },
-    }).select('_id');
-
-    const facultyIdList = facultyIds.map((f) => f._id);
-
     // Get existing reviewers for this proposal (only human reviews)
     const existingReviewerIds = await Review.find({
       proposal: proposalId,
       reviewType: ReviewType.HUMAN,
     }).distinct('reviewer');
 
+    // faculty is a title string on the user (Option A) — match by regex.
     // First, try to find eligible reconciliation reviewer with completed reviews (experience)
     let eligibleReviewer = await User.aggregate([
       {
         $match: {
-          faculty: { $in: facultyIdList },
+          faculty: { $regex: facultyTitleRegex },
           role: UserRole.REVIEWER,
           isActive: true,
           invitationStatus: { $in: ['accepted', 'added'] },
@@ -1101,7 +1065,7 @@ class ReassignReviewController {
       eligibleReviewer = await User.aggregate([
         {
           $match: {
-            faculty: { $in: facultyIdList },
+            faculty: { $regex: facultyTitleRegex },
             role: UserRole.REVIEWER,
             isActive: true,
             invitationStatus: { $in: ['accepted', 'added'] },
@@ -1187,7 +1151,6 @@ class ReassignReviewController {
       const proposal = await Proposal.findById(proposalId).populate({
         path: 'submitter',
         select: 'faculty name',
-        populate: { path: 'faculty', select: 'title code' },
       });
 
       if (!proposal) {
@@ -1230,20 +1193,15 @@ class ReassignReviewController {
           (r) => r.reviewType === ReviewType.RECONCILIATION
         ).length;
 
-        // Get faculty and department details
-        const facultyDetails = await Faculty.findById(bypassUser.faculty);
-        const departmentDetails = bypassUser.department
-          ? await Department.findById(bypassUser.department)
-          : null;
-
+        // faculty/department are title strings on the user (Option A).
         bypassUserEligible = {
           _id: bypassUser._id,
           name: bypassUser.name,
           email: bypassUser.email,
           academicTitle: bypassUser.academicTitle,
           phoneNumber: bypassUser.phoneNumber,
-          facultyTitle: facultyDetails?.title || 'Unknown',
-          departmentTitle: departmentDetails?.title || 'Unknown',
+          facultyTitle: bypassUser.faculty || 'Unknown',
+          departmentTitle: bypassUser.department || 'Unknown',
           totalReviewsCount,
           pendingReviewsCount,
           completedReviewsCount,
@@ -1251,9 +1209,7 @@ class ReassignReviewController {
           lastLogin: bypassUser.lastLogin,
           createdAt: bypassUser.createdAt,
           completionRate:
-            totalReviewsCount > 0
-              ? Math.round((completedReviewsCount / totalReviewsCount) * 100)
-              : 0,
+            totalReviewsCount > 0 ? Math.round((completedReviewsCount / totalReviewsCount) * 100) : 0,
           isSpecialReviewer: true, // Flag to identify this user in frontend
         };
 
@@ -1268,9 +1224,7 @@ class ReassignReviewController {
       }
 
       const rawFacultyTitle =
-        typeof submitterFaculty === 'string'
-          ? submitterFaculty
-          : (submitterFaculty as any).title;
+        typeof submitterFaculty === 'string' ? submitterFaculty : (submitterFaculty as any).title;
 
       // Remove parenthetical codes and trim
       const cleanedFacultyTitle = rawFacultyTitle.split('(')[0].trim();
@@ -1308,17 +1262,12 @@ class ReassignReviewController {
         .join('|');
       const facultyTitleRegex = new RegExp(regexPattern, 'i');
 
-      const facultyIds = await Faculty.find({
-        title: { $regex: facultyTitleRegex },
-      }).select('_id');
-
-      const facultyIdList = facultyIds.map((f) => f._id);
-
+      // faculty is a title string on the user (Option A) — match by regex.
       // Find eligible reviewers with comprehensive workload tracking
       const eligibleReviewers = await User.aggregate([
         {
           $match: {
-            faculty: { $in: facultyIdList },
+            faculty: { $regex: facultyTitleRegex },
             role: UserRole.REVIEWER,
             isActive: true,
             invitationStatus: { $in: ['accepted', 'added'] },
@@ -1337,20 +1286,12 @@ class ReassignReviewController {
             as: 'allReviews',
           },
         },
+        // faculty/department are title strings on the user (Option A) — keep
+        // the array shape so the $arrayElemAt projections below still work.
         {
-          $lookup: {
-            from: 'faculties',
-            localField: 'faculty',
-            foreignField: '_id',
-            as: 'facultyDetails',
-          },
-        },
-        {
-          $lookup: {
-            from: 'departments',
-            localField: 'department',
-            foreignField: '_id',
-            as: 'departmentDetails',
+          $addFields: {
+            facultyDetails: [{ title: '$faculty' }],
+            departmentDetails: [{ title: '$department' }],
           },
         },
         {

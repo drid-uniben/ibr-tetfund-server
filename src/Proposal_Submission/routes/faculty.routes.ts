@@ -3,8 +3,9 @@ import facultyController from '../controllers/faculty.controller';
 
 const router = express.Router();
 
+// Full nested faculty -> departments structure (single fetch for forms).
+router.get('/data', facultyController.getFacultyDepartmentData);
 router.get('/', facultyController.getFaculties);
 router.get('/:code', facultyController.getFacultyByCode);
-router.get('/id/:id', facultyController.getFacultyById);
 
 export default router;

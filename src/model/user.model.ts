@@ -19,8 +19,8 @@ export interface IUser extends Document {
   password?: string;
   role: UserRole;
   userType: UserType;
-  department?: Types.ObjectId;
-  faculty?: Types.ObjectId;
+  department?: string;
+  faculty?: string;
   academicTitle?: string;
   matricNumber?: string;
   programme?: string;
@@ -85,13 +85,11 @@ const UserSchema: Schema<IUser> = new Schema(
       enum: Object.values(UserType),
     },
     department: {
-      type: Schema.Types.ObjectId,
-      ref: 'Department',
+      type: String,
       trim: true,
     },
     faculty: {
-      type: Schema.Types.ObjectId,
-      ref: 'Faculty',
+      type: String,
       trim: true,
     },
     academicTitle: {

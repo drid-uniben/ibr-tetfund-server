@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "seed:admin": "ts-node src/scripts/createAdmin.ts",
-    "populate": "ts-node src/scripts/populateData.ts",
+    "migrate:faculty": "ts-node src/scripts/migrateFacultyDepartmentToNames.ts",
     "migrate:uploads": "ts-node src/scripts/migrateUploads.ts",
     "clean": "rimraf dist",
     "lint": "eslint 'src/**/*.{ts,js}'",

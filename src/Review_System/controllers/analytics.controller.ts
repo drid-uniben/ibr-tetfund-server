@@ -45,20 +45,13 @@ class AnalyticsController {
           },
         },
         { $unwind: '$submitterDetails' },
-        {
-          $lookup: {
-            from: 'faculties',
-            localField: 'submitterDetails.faculty',
-            foreignField: '_id',
-            as: 'facultyDetails',
-          },
-        },
-        { $unwind: '$facultyDetails' },
+        // faculty is stored as a title string on the user (Option A) — group
+        // on it directly rather than joining a faculties collection.
+        { $match: { 'submitterDetails.faculty': { $nin: [null, ''] } } },
         {
           $group: {
-            _id: '$facultyDetails._id',
-            facultyName: { $first: '$facultyDetails.title' },
-            facultyCode: { $first: '$facultyDetails.code' },
+            _id: '$submitterDetails.faculty',
+            facultyName: { $first: '$submitterDetails.faculty' },
             count: { $sum: 1 },
           },
         },
@@ -106,20 +99,13 @@ class AnalyticsController {
           },
         },
         { $unwind: '$submitterDetails' },
-        {
-          $lookup: {
-            from: 'faculties',
-            localField: 'submitterDetails.faculty',
-            foreignField: '_id',
-            as: 'facultyDetails',
-          },
-        },
-        { $unwind: '$facultyDetails' },
+        // faculty is stored as a title string on the user (Option A) — group
+        // on it directly rather than joining a faculties collection.
+        { $match: { 'submitterDetails.faculty': { $nin: [null, ''] } } },
         {
           $group: {
-            _id: '$facultyDetails._id',
-            facultyName: { $first: '$facultyDetails.title' },
-            facultyCode: { $first: '$facultyDetails.code' },
+            _id: '$submitterDetails.faculty',
+            facultyName: { $first: '$submitterDetails.faculty' },
             count: { $sum: 1 },
           },
         },
@@ -156,20 +142,13 @@ class AnalyticsController {
           },
         },
         { $unwind: '$submitterDetails' },
-        {
-          $lookup: {
-            from: 'faculties',
-            localField: 'submitterDetails.faculty',
-            foreignField: '_id',
-            as: 'facultyDetails',
-          },
-        },
-        { $unwind: '$facultyDetails' },
+        // faculty is stored as a title string on the user (Option A) — group
+        // on it directly rather than joining a faculties collection.
+        { $match: { 'submitterDetails.faculty': { $nin: [null, ''] } } },
         {
           $group: {
-            _id: '$facultyDetails._id',
-            facultyName: { $first: '$facultyDetails.title' },
-            facultyCode: { $first: '$facultyDetails.code' },
+            _id: '$submitterDetails.faculty',
+            facultyName: { $first: '$submitterDetails.faculty' },
             count: { $sum: 1 },
           },
         },

@@ -45,10 +45,6 @@ class ReviewController {
           populate: {
             path: 'submitter',
             select: 'name email faculty department',
-            populate: [
-              { path: 'faculty', select: 'title' },
-              { path: 'department', select: 'title' },
-            ],
           },
         })
         .sort({ dueDate: 1 });
@@ -78,10 +74,6 @@ class ReviewController {
         populate: {
           path: 'submitter',
           select: 'name email faculty department academicTitle',
-          populate: [
-            { path: 'faculty', select: 'title' },
-            { path: 'department', select: 'title' },
-          ],
         },
       });
 
@@ -360,9 +352,7 @@ class ReviewController {
     try {
       // Ensure we're working with just the ObjectId string
       const proposalIdStr =
-        typeof proposalId === 'object' && proposalId !== null
-          ? (proposalId as any).toString()
-          : proposalId.split('{')[0].trim(); // Extract just the ID if it's a string containing object data
+        typeof proposalId === 'object' && proposalId !== null ? (proposalId as any).toString() : proposalId.split('{')[0].trim(); // Extract just the ID if it's a string containing object data
 
       // Execute the discrepancy analysis
       const result =
