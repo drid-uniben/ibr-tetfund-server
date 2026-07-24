@@ -20,12 +20,18 @@
  * Usage:  npm run migrate:faculty
  */
 import mongoose from 'mongoose';
-import type { Db } from 'mongodb';
 import dotenv from 'dotenv';
 import logger from '../utils/logger';
 import { isValidUnit, findUnitByTitle } from '../utils/facultyContent';
 
 dotenv.config();
+
+// Type the Db handle from mongoose's own bundled mongodb copy rather than the
+// top-level `mongodb` package. On a machine where a second mongodb version is
+// hoisted into node_modules, those two copies have incompatible (private)
+// types, and mongoose.connection.db would not be assignable to a top-level
+// `Db`. Deriving it here keeps this in step with what mongoose actually returns.
+type Db = NonNullable<typeof mongoose.connection.db>;
 
 interface TitledDoc {
   _id: mongoose.Types.ObjectId;

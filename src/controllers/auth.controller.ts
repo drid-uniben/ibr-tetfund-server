@@ -4,7 +4,6 @@ import tokenService from '../services/token.service';
 import { UnauthorizedError } from '../utils/customErrors';
 import asyncHandler from '../utils/asyncHandler';
 import logger from '../utils/logger';
-import { ObjectId } from 'mongoose';
 
 interface IAuthResponse {
   success: boolean;
@@ -66,7 +65,7 @@ class AuthController {
         success: true,
         accessToken: tokens.accessToken,
         user: {
-          id: (user._id as ObjectId).toString(),
+          id: String(user._id),
           name: user.name,
           email: user.email,
           role: user.role,
@@ -127,7 +126,7 @@ class AuthController {
         success: true,
         accessToken: tokens.accessToken,
         user: {
-          id: (user._id as ObjectId).toString(),
+          id: String(user._id),
           name: user.name,
           email: user.email,
           role: user.role,
@@ -186,7 +185,7 @@ class AuthController {
         success: true,
         accessToken: tokens.accessToken,
         user: {
-          id: (user._id as ObjectId).toString(),
+          id: String(user._id),
           name: user.name,
           email: user.email,
           role: user.role,
@@ -213,9 +212,9 @@ class AuthController {
       }
 
       // Include all required properties in the token payload
-      const userId = user._id as ObjectId;
+      const userId = String(user._id);
       const tokens = await tokenService.rotateRefreshToken(refreshToken, {
-        userId: userId.toString(),
+        userId,
         email: user.email,
         role: decoded.role,
       });
