@@ -66,13 +66,13 @@ export const reconciliationAssignmentTemplate = (
         <p>Your task is to provide an independent assessment and help resolve the scoring discrepancies. Please complete your reconciliation review by:</p>
         
         <p class="deadline-notice"><strong>${new Date(
-          dueDate
-        ).toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        })}</strong></p>
+    dueDate
+  ).toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })}</strong></p>
         
         <a href="${reviewUrl}" class="button">Start Reconciliation Review</a>
         

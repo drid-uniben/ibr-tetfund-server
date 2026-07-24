@@ -535,7 +535,7 @@ class ReconciliationController {
       regularReviews.length;
 
     // Final score: 60% reconciliation review + 40% average of regular reviews
-    const finalScore = reconciliationReview.totalScore * 0.6 + regularAvg * 0.4;
+    const finalScore = (reconciliationReview.totalScore * 0.6) + (regularAvg * 0.4);
 
     // Update proposal status
     const proposal = (await Proposal.findById(

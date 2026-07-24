@@ -1,9 +1,10 @@
 import globals from "globals";
 import eslint from "@eslint/js";
 import typescriptParser from "@typescript-eslint/parser";
-import typescriptEslint from "@typescript-eslint/eslint-plugin";
+import typescriptEslintPlugin from "@typescript-eslint/eslint-plugin";
 
 export default [
+  eslint.configs.recommended,
   {
     languageOptions: {
       parser: typescriptParser,
@@ -16,7 +17,7 @@ export default [
       },
     },
     plugins: {
-      typescriptEslint: typescriptEslint,
+      "@typescript-eslint": typescriptEslintPlugin,
     },
     ignores: ["node_modules/*", "dist/*"],
     rules: {
@@ -24,13 +25,41 @@ export default [
       semi: "error",
       "semi-spacing": "error",
       eqeqeq: "warn",
-      "no-invalid-this": "error",
+      // Mongoose schema hooks/methods/validators rely on the `this` binding
+      // provided by Mongoose at call time (e.g. `UserSchema.pre('save', function () { this... })`,
+      // `function (this: IDoc) { ... }` validators). This is a correct and
+      // idiomatic pattern, not a bug, so the rule is disabled rather than
+      // rewriting model logic.
+      "no-invalid-this": "off",
       "no-return-assign": "error",
       "no-unused-expressions": ["error", { allowTernary: true }],
       "no-useless-concat": "error",
       "no-useless-return": "error",
       "no-constant-condition": "warn",
-      "no-unused-vars": ["warn", { argsIgnorePattern: "req|res|next|__" }],
+      // Use the TypeScript-aware version instead of the core rule: the core
+      // `no-unused-vars` does not understand TS-only constructs such as
+      // `enum` members, `this: Type` parameter annotations, parameter names
+      // inside function-type signatures, or interface method signatures,
+      // and flags all of them as false positives.
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          args: "after-used",
+          argsIgnorePattern: "^_|req|res|next|__",
+          varsIgnorePattern: "^_",
+        },
+      ],
+      // This codebase's "const object + same-named type" idiom
+      // (`export const Foo = {...} as const; export type Foo = (typeof Foo)[...]`)
+      // declares `Foo` once in value-space and once in type-space, which is
+      // valid, idiomatic TypeScript (the compiler keeps type and value
+      // namespaces separate). Neither the core `no-redeclare` rule nor its
+      // TypeScript-aware counterpart (even with `ignoreDeclarationMerge`)
+      // recognize this pattern, so both are disabled here rather than
+      // rewriting these models to plain TS enums.
+      "no-redeclare": "off",
+      "@typescript-eslint/no-redeclare": "off",
       indent: ["error", 2, { SwitchCase: 1 }],
       "no-mixed-spaces-and-tabs": "warn",
       "space-before-blocks": "error",
@@ -63,6 +92,26 @@ export default [
     files: ["**/*.js", "**/*.ts"],
     languageOptions: { sourceType: "commonjs" },
   },
-  { languageOptions: { globals: globals.node } },
-  eslint.configs.recommended,
+  {
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        // TypeScript ambient/DOM-lib global namespace used for
+        // `Express.Multer.File` type references in multer route files.
+        // TypeScript itself already validates this via `tsc --noEmit`;
+        // ESLint's core `no-undef` doesn't know about ambient type
+        // namespaces, so it is declared as a global here.
+        Express: "readonly",
+      },
+    },
+  },
+  {
+    // Test files use the Jest global test API (describe/it/expect/...).
+    files: ["src/__tests__/**/*.{ts,js}"],
+    languageOptions: {
+      globals: {
+        ...globals.jest,
+      },
+    },
+  },
 ];

@@ -213,11 +213,9 @@ class SubmitFullProposalController {
           hasSubmitted: !!existingFullProposal,
           isWithinDeadline,
           deadline: deadline.toISOString(),
-          daysRemaining: isWithinDeadline
-            ? Math.ceil(
-                (deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-              )
-            : 0,
+          daysRemaining: isWithinDeadline ? Math.ceil(
+            (deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+          ) : 0,
         },
       });
     }
@@ -399,11 +397,9 @@ class SubmitFullProposalController {
           hasSubmitted,
           isWithinDeadline,
           deadline: deadline.toISOString(),
-          daysRemaining: isWithinDeadline
-            ? Math.ceil(
-                (deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-              )
-            : 0,
+          daysRemaining: isWithinDeadline ? Math.ceil(
+            (deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+          ) : 0,
           reviewComments: fullProposal.reviewComments,
         },
       });

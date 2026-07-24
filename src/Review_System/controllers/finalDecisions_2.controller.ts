@@ -9,7 +9,6 @@ import asyncHandler from '../../utils/asyncHandler';
 import logger from '../../utils/logger';
 import { IUser } from '../../model/user.model';
 import emailService from '../../services/email.service';
-import mongoose from 'mongoose';
 
 // Define a generic response interface for admin controller
 interface IAdminResponse {
@@ -200,7 +199,7 @@ class FullProposalDecisionsController {
                       {
                         $lte: [
                           '$deadline',
-                          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+                          new Date(Date.now() + (7 * 24 * 60 * 60 * 1000)), // 7 days from now
                         ],
                       },
                     ],

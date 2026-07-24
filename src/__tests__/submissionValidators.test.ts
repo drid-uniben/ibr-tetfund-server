@@ -42,7 +42,7 @@ describe('staffProposalSchema', () => {
 
   it('allows omitting the department when the unit lists none', () => {
     const emptyUnit = academicUnits.find((u) => u.departments.length === 0)!;
-    const { department, ...rest } = validStaffBody;
+    const { department: _department, ...rest } = validStaffBody;
     const result = staffProposalSchema.safeParse({
       body: { ...rest, faculty: emptyUnit.title },
     });

@@ -9,7 +9,6 @@ import logger from '../../utils/logger';
 import { IUser } from '../../model/user.model';
 import emailService from '../../services/email.service';
 import Award, { AwardStatus } from '../../Review_System/models/award.model';
-import mongoose from 'mongoose';
 
 // Define a generic response interface for admin controller
 interface IAdminResponse {

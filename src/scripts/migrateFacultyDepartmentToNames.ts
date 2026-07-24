@@ -53,12 +53,10 @@ export async function migrateFacultyDepartment(db: Db): Promise<MigrationResult>
     .toArray()) as unknown as TitledDoc[];
 
   const facultyTitleById = new Map<string, string>();
-  for (const f of faculties)
-    if (f.title) facultyTitleById.set(String(f._id), f.title);
+  for (const f of faculties) if (f.title) facultyTitleById.set(String(f._id), f.title);
 
   const departmentTitleById = new Map<string, string>();
-  for (const d of departments)
-    if (d.title) departmentTitleById.set(String(d._id), d.title);
+  for (const d of departments) if (d.title) departmentTitleById.set(String(d._id), d.title);
 
   logger.info(
     `[migrate] Loaded ${facultyTitleById.size} faculties and ${departmentTitleById.size} departments from old collections`

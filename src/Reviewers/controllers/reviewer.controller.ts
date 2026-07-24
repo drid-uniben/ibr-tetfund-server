@@ -19,12 +19,6 @@ import logger from '../../utils/logger';
 import generateSecurePassword from '../../utils/passwordGenerator';
 import { Types } from 'mongoose';
 
-interface IReviewerQuery {
-  status?: string;
-  faculty?: string;
-  department?: string;
-}
-
 interface IPaginationOptions {
   page: number;
   limit: number;
@@ -73,7 +67,7 @@ class ReviewerController {
       await User.create({
         email,
         inviteToken: hashedToken,
-        inviteTokenExpires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        inviteTokenExpires: new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)), // 30 days
         role: UserRole.REVIEWER,
         invitationStatus: 'pending',
         isActive: false,
@@ -328,7 +322,7 @@ class ReviewerController {
             assignedReviewsCount > 0 ? Math.round((completedReviewsCount / assignedReviewsCount) * 100) : 0;
 
           // Fetch all reviews assigned to this reviewer
-          const allAssignedReviews = await Review.find({
+          await Review.find({
             reviewer: reviewer._id,
             reviewType: { $ne: 'ai' }, // Exclude AI reviews if necessary
           }).populate('proposal', 'projectTitle submitterType'); // Populate proposal details for each review
@@ -540,7 +534,7 @@ class ReviewerController {
       // Update reviewer with new token
       reviewer.inviteToken = hashedToken;
       reviewer.inviteTokenExpires = new Date(
-        Date.now() + 30 * 24 * 60 * 60 * 1000
+        Date.now() + (30 * 24 * 60 * 60 * 1000)
       ); // 30 days
 
       await reviewer.save();

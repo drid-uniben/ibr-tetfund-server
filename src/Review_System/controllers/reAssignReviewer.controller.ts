@@ -9,7 +9,7 @@ import asyncHandler from '../../utils/asyncHandler';
 import logger from '../../utils/logger';
 import emailService from '../../services/email.service';
 import { NotFoundError, BadRequestError } from '../../utils/customErrors';
-import mongoose, { Types } from 'mongoose';
+import mongoose from 'mongoose';
 import agenda from '../../config/agenda'; // Import agenda
 
 interface IReassignReviewResponse {

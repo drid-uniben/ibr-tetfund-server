@@ -437,7 +437,7 @@ class AssignReviewController {
         dueDate,
       });
 
-      const savedReview = await review.save();
+      await review.save();
       logger.info(
         `Assigned proposal ${proposalId} to human reviewer ${selectedReviewer._id}`
       );
