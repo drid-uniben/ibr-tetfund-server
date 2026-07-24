@@ -1,0 +1,15 @@
+node_modules
+npm-debug.log
+Dockerfile*
+docker-compose*
+.git
+.gitignore
+README.md
+.eslint*
+.vscode
+.idea
+*.md
+coverage
+dist
+uploads/*  # Don't copy uploaded files to image
+logs

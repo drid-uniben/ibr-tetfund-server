@@ -1,5 +1,5 @@
 {
-  "name": "drid_server2_v2",
+  "name": "ibr-tetfund-server",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -16,8 +16,7 @@
     "test": "jest --runInBand"
   },
   "keywords": [],
-  "author": "Raymond Omoyakhi <raymondomoyakhi@gmail.com> and Oluomachi Udezue <basilchimaobi2@gmail.com>.",
-  "license": "ISC",
+  "license": "Apache-2.0",
   "description": "A Research Submission Management API for grants and research funding.",
   "dependencies": {
     "agenda": "^5.0.0",
