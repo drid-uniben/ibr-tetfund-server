@@ -79,56 +79,36 @@ export const staffProposalSchema = z.object({
       estimatedBudget: z
         .union([z.string(), z.number()])
         .transform((value) => parseFloat(value.toString())),
-      coInvestigators: z.array(coInvestigatorSchema).optional(),
+      // In multipart requests coInvestigators arrives as a JSON-encoded
+      // string (the controller JSON.parses it after validation); it may
+      // also arrive as an already-parsed array. Accept both shapes here
+      // and defer structural validation of parsed entries to the
+      // controller, since we cannot safely JSON.parse inside the schema.
+      coInvestigators: z
+        .union([z.string(), z.array(coInvestigatorSchema)])
+        .optional(),
     })
     .refine(departmentMatchesFaculty, departmentMatchIssue),
 });
 
 // Master student proposal validation schema
+//
+// NOTE: the master-student submission form/controller only ever sends
+// fullName, email, alternativeEmail (optional) and phoneNumber plus a
+// docFile upload (see submit.controller.ts#submitMasterStudentProposal).
+// This schema is intentionally reconciled to match that real payload —
+// it previously demanded many fields (matricNumber, programme, faculty,
+// projectTitle, etc.) that are never submitted, which would have
+// rejected every real master-student submission if wired up as-is.
 export const masterStudentProposalSchema = z.object({
-  body: z
-    .object({
-      fullName: z
-        .string()
-        .min(2, { message: 'Full name must be at least 2 characters' }),
-      matricNumber: z
-        .string()
-        .min(2, { message: 'Matriculation number is required' }),
-      programme: z.string().min(2, { message: 'Programme is required' }),
-      department: z.string().optional(),
-      faculty: facultyValidator,
-      email: emailValidator,
-      alternativeEmail: alternativeEmailValidator,
-      phoneNumber: phoneValidator,
-      projectTitle: z
-        .string()
-        .min(5, { message: 'Project title must be at least 5 characters' }),
-      problemStatement: z
-        .string()
-        .min(10, { message: 'Problem statement is required' }),
-      objectivesOutcomes: z
-        .string()
-        .min(10, { message: 'Objectives and outcomes are required' }),
-      researchApproach: z
-        .string()
-        .min(10, { message: 'Research approach is required' }),
-      innovationNovelty: z
-        .string()
-        .min(10, { message: 'Innovation novelty is required' }),
-      innovationContribution: z
-        .string()
-        .min(10, { message: 'Innovation contribution is required' }),
-      interdisciplinaryRelevance: z
-        .string()
-        .min(10, { message: 'Interdisciplinary relevance is required' }),
-      implementationPlan: z
-        .string()
-        .min(10, { message: 'Implementation plan is required' }),
-      estimatedBudget: z
-        .union([z.string(), z.number()])
-        .transform((value) => parseFloat(value.toString())),
-    })
-    .refine(departmentMatchesFaculty, departmentMatchIssue),
+  body: z.object({
+    fullName: z
+      .string()
+      .min(2, { message: 'Full name must be at least 2 characters' }),
+    email: emailValidator,
+    alternativeEmail: alternativeEmailValidator,
+    phoneNumber: phoneValidator,
+  }),
 });
 
 // Export inferred types

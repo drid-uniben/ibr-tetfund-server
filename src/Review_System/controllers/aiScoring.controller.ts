@@ -11,10 +11,16 @@ import logger from '../../utils/logger';
 import emailService from '../../services/email.service'; // Import emailService
 import { reviewProposal } from 'uniben-ai-proposal-review-cli'; // Import the reviewProposal function
 import agenda from '../../config/agenda'; // Import the agenda instance
+import path from 'path';
+import { getUploadsDir } from '../../utils/uploadsPath';
+
+// Maximum number of times a failed AI review job will be automatically retried.
+const MAX_AI_REVIEW_ATTEMPTS = 3;
 
 // Generate AI review for a proposal
 export const generateAIReviewForProposal = async (
-  proposalId: string
+  proposalId: string,
+  attempt = 0
 ): Promise<{ success: boolean; message: string; data?: any }> => {
   try {
     // Check if proposal exists
@@ -60,16 +66,29 @@ export const generateAIReviewForProposal = async (
       data: completedAIReview,
     };
   } catch (error: any) {
-    await agenda.now('generate AI review', {
-      proposalId: proposalId,
-    });
-    logger.info(
-      `Dispatched failed AI review job for proposal ${proposalId} to Agenda`
-    );
     // Catch errors during the process
     logger.error(
       `Error generating AI review for proposal ${proposalId}:`,
       error
+    );
+
+    if (attempt < MAX_AI_REVIEW_ATTEMPTS) {
+      await agenda.now('generate AI review', {
+        proposalId: proposalId,
+        attempt: attempt + 1,
+      });
+      logger.info(
+        `Dispatched failed AI review job for proposal ${proposalId} to Agenda (attempt ${attempt + 1} of ${MAX_AI_REVIEW_ATTEMPTS})`
+      );
+
+      return {
+        success: false,
+        message: `Failed to generate AI review for proposal ${proposalId}: ${error.message || 'Unknown error'}`,
+      };
+    }
+
+    logger.error(
+      `Exhausted ${MAX_AI_REVIEW_ATTEMPTS} retry attempts for AI review of proposal ${proposalId}. Not re-dispatching.`
     );
 
     const supportEmail = process.env.SUPPORT_EMAIL;
@@ -120,7 +139,7 @@ const generateAIReviewScores = async (reviewId: string): Promise<void> => {
     // For staff, construct formatted text input
     const staffTextInput = `
 Proposal Title:
-${proposal.title || ''}
+${proposal.projectTitle || ''}
 
 Problem Statement:
 ${proposal.problemStatement || ''}
@@ -148,7 +167,7 @@ ${proposal.estimatedBudget || ''}
     }
     // Extract file name from the URL and construct the absolute path
     const fileName = proposal.docFile.split('/').pop();
-    const filePath = `${process.cwd()}/src/uploads/documents/${fileName}`; //TODO ensure the path is correct...
+    const filePath = path.join(getUploadsDir(), fileName as string);
     evaluationResult = await reviewProposal(filePath, '-f');
   } else {
     throw new Error(`Unknown submitter type: ${proposal.submitterType}`);

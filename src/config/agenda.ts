@@ -18,14 +18,15 @@ const agenda = new Agenda({
 // Define interface for AI Review job data
 interface AIReviewJobData {
   proposalId: string;
+  attempt?: number;
 }
 
 // Define the job for generating AI reviews
 agenda.define('generate AI review', async (job: Job<AIReviewJobData>) => {
   // Type the job parameter
-  const { proposalId } = job.attrs.data;
+  const { proposalId, attempt } = job.attrs.data;
   if (proposalId) {
-    await generateAIReviewForProposal(proposalId);
+    await generateAIReviewForProposal(proposalId, attempt ?? 0);
     logger.info(`AI review generated for proposal ${proposalId}`);
   } else {
     logger.error(

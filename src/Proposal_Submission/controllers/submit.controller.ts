@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import User from '../../model/user.model';
 import Proposal, { SubmitterType } from '../models/proposal.model';
-import { NotFoundError } from '../../utils/customErrors';
+import { NotFoundError, BadRequestError } from '../../utils/customErrors';
 import { isValidUnit, isValidUnitDepartment } from '../../utils/facultyContent';
 import asyncHandler from '../../utils/asyncHandler';
 import logger from '../../utils/logger';
@@ -121,7 +121,16 @@ class SubmitController {
           phoneNumber,
         });
 
-        await user.save();
+        try {
+          await user.save();
+        } catch (err: any) {
+          if (err.code === 11000) {
+            throw new BadRequestError(
+              'This alternative email is already in use by another account.'
+            );
+          }
+          throw err;
+        }
         logger.info(`New staff user created with email: ${email}`);
       }
 
@@ -208,7 +217,16 @@ class SubmitController {
           phoneNumber,
         });
 
-        await user.save();
+        try {
+          await user.save();
+        } catch (err: any) {
+          if (err.code === 11000) {
+            throw new BadRequestError(
+              'This alternative email is already in use by another account.'
+            );
+          }
+          throw err;
+        }
         logger.info(`New master student user created with email: ${email}`);
       }
 
