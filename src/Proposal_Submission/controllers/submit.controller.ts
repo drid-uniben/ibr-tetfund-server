@@ -3,6 +3,7 @@ import User from '../../model/user.model';
 import Proposal, { SubmitterType } from '../models/proposal.model';
 import { NotFoundError, BadRequestError } from '../../utils/customErrors';
 import { isValidUnit, isValidUnitDepartment } from '../../utils/facultyContent';
+import { resolveWindow } from '../../model/submissionWindow.model';
 import asyncHandler from '../../utils/asyncHandler';
 import logger from '../../utils/logger';
 import emailService from '../../services/email.service';
@@ -106,6 +107,16 @@ class SubmitController {
         return;
       }
 
+      // Enforce the admin-configured submission window for staff concepts
+      const staffWindow = await resolveWindow('staff_concept');
+      if (!staffWindow.isOpen) {
+        res.status(400).json({
+          success: false,
+          message: 'Submissions for this call are currently closed.',
+        });
+        return;
+      }
+
       // Check if user already exists or create new user
       let user = await User.findOne({ email });
 
@@ -204,6 +215,16 @@ class SubmitController {
       res: Response<IProposalResponse>
     ): Promise<void> => {
       const { fullName, email, alternativeEmail, phoneNumber } = req.body;
+
+      // Enforce the admin-configured submission window for masters concepts
+      const mastersWindow = await resolveWindow('masters_concept');
+      if (!mastersWindow.isOpen) {
+        res.status(400).json({
+          success: false,
+          message: 'Submissions for this call are currently closed.',
+        });
+        return;
+      }
 
       // Check if user already exists or create new user
       let user = await User.findOne({ email });

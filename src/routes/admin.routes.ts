@@ -11,6 +11,7 @@ import proposalReviewsRoutes from '../Review_System/routes/proposalReviews.route
 import finalDecisionsRoutes from '../Review_System/routes/finalDecisions.routes';
 import finalDecisionRoutes from '../Review_System/routes/finalDecisions_2.routes';
 import analyticsRoutes from '../Review_System/routes/analytics.routes';
+import submissionWindowController from '../Proposal_Submission/controllers/submissionWindow.controller';
 
 const router = express.Router();
 
@@ -54,6 +55,20 @@ router.put(
   authenticateAdminToken,
   adminRateLimiter,
   adminController.toggleProposalArchiveStatus
+);
+
+// Admin-managed submission windows (deadlines)
+router.get(
+  '/submission-windows',
+  authenticateAdminToken,
+  adminRateLimiter,
+  submissionWindowController.listWindows
+);
+router.put(
+  '/submission-windows/:phase',
+  authenticateAdminToken,
+  adminRateLimiter,
+  submissionWindowController.upsertWindow
 );
 
 router.use('/researcher', researcherManagementRoutes);

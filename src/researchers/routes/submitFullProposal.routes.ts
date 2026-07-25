@@ -2,7 +2,10 @@ import { Router, Request } from 'express';
 import submitFullProposalController from '../controllers/submitFullProposal.controller';
 import multer, { FileFilterCallback } from 'multer';
 import path from 'path';
-import { rateLimiter } from '../../middleware/auth.middleware';
+import {
+  rateLimiter,
+  authenticateResearcherToken,
+} from '../../middleware/auth.middleware';
 import { getUploadsDir as getUploadsPath } from '../../utils/uploadsPath';
 
 const router = Router();
@@ -75,6 +78,7 @@ const submissionRateLimiter = rateLimiter(10, 60 * 60 * 1000); // 10 requests pe
 // Submit full proposal
 router.post(
   '/submit-full-proposal',
+  authenticateResearcherToken,
   submissionRateLimiter,
   documentUpload,
   submitFullProposalController.submitFullProposal
@@ -89,6 +93,7 @@ router.get(
 // Submit final submission
 router.post(
   '/submit-final-submission',
+  authenticateResearcherToken,
   submissionRateLimiter,
   documentUpload,
   submitFullProposalController.submitFinalSubmission
