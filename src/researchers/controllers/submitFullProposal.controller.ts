@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
-import User from '../../model/user.model';
 import Proposal from '../../Proposal_Submission/models/proposal.model';
 import FullProposal from '../models/fullProposal.model';
 import Award from '../../Review_System/models/award.model';
+import { resolveWindow } from '../../model/submissionWindow.model';
 import asyncHandler from '../../utils/asyncHandler';
 import logger from '../../utils/logger';
 import emailService from '../../services/email.service';
@@ -19,7 +19,6 @@ interface IFullProposalResponse {
 
 interface IFullProposalRequest {
   proposalId: string;
-  userId: string;
 }
 
 interface IFinalSubmissionResponse {
@@ -33,8 +32,27 @@ interface IFinalSubmissionResponse {
 
 interface IFinalSubmissionRequest {
   proposalId: string;
-  userId: string;
 }
+
+// Build a clear "closed" message, mentioning the deadline when known.
+const buildClosedMessage = (label: string, closesAt: Date | null): string => {
+  if (closesAt) {
+    return `The submission window for ${label} is closed (deadline: ${closesAt.toISOString()}).`;
+  }
+  return `Submissions for ${label} are currently closed.`;
+};
+
+// Days remaining until closesAt, or null when there is no deadline / it's closed.
+const computeDaysRemaining = (
+  closesAt: Date | null,
+  isOpen: boolean,
+  now: Date
+): number | null => {
+  if (!closesAt || !isOpen) {
+    return null;
+  }
+  return Math.ceil((closesAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+};
 
 class SubmitFullProposalController {
   // Submit full proposal for approved proposal
@@ -43,7 +61,11 @@ class SubmitFullProposalController {
       req: Request<{}, {}, IFullProposalRequest>,
       res: Response<IFullProposalResponse>
     ): Promise<void> => {
-      const { proposalId, userId } = req.body;
+      const { proposalId } = req.body;
+
+      // Authenticated researcher (set by authenticateResearcherToken)
+      const user = (req as any).user;
+      const userId = user._id.toString();
 
       // Validate proposal exists and is approved
       const proposal = await Proposal.findById(proposalId);
@@ -69,16 +91,7 @@ class SubmitFullProposalController {
         return;
       }
 
-      // Validate user exists and owns the proposal
-      const user = await User.findById(userId);
-      if (!user) {
-        res.status(404).json({
-          success: false,
-          message: 'User not found',
-        });
-        return;
-      }
-
+      // Ensure the authenticated user owns the proposal
       if (proposal.submitter.toString() !== userId) {
         res.status(403).json({
           success: false,
@@ -101,15 +114,12 @@ class SubmitFullProposalController {
         return;
       }
 
-      // Check deadline (July 31, 2025)
-      const deadline = new Date('2025-07-31T23:59:59.999Z');
-      const now = new Date();
-
-      if (now > deadline) {
+      // Enforce the admin-configured submission window
+      const window = await resolveWindow('full_proposal');
+      if (!window.isOpen) {
         res.status(400).json({
           success: false,
-          message:
-            'The deadline for full proposal submission (July 31, 2025) has passed',
+          message: buildClosedMessage('full proposals', window.closesAt),
         });
         return;
       }
@@ -132,7 +142,7 @@ class SubmitFullProposalController {
         proposal: proposalId,
         submitter: userId,
         docFile: docFileUrl,
-        deadline,
+        deadline: window.closesAt ?? undefined,
       });
 
       await fullProposal.save();
@@ -171,7 +181,7 @@ class SubmitFullProposalController {
         message: 'Full proposal submitted successfully and is under review.',
         data: {
           fullProposalId: (fullProposal._id as Types.ObjectId).toString(),
-          deadline: deadline.toISOString(),
+          deadline: window.closesAt ? window.closesAt.toISOString() : null,
         },
       });
     }
@@ -201,9 +211,10 @@ class SubmitFullProposalController {
         proposal: proposalId,
       });
 
-      const deadline = new Date('2025-07-31T23:59:59.999Z');
+      const window = await resolveWindow('full_proposal');
+      const isWithinDeadline = window.isOpen;
+      const closesAt = window.closesAt;
       const now = new Date();
-      const isWithinDeadline = now <= deadline;
 
       res.status(200).json({
         success: true,
@@ -212,10 +223,8 @@ class SubmitFullProposalController {
           isApproved: !!award,
           hasSubmitted: !!existingFullProposal,
           isWithinDeadline,
-          deadline: deadline.toISOString(),
-          daysRemaining: isWithinDeadline ? Math.ceil(
-            (deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-          ) : 0,
+          deadline: closesAt ? closesAt.toISOString() : null,
+          daysRemaining: computeDaysRemaining(closesAt, isWithinDeadline, now),
         },
       });
     }
@@ -227,7 +236,11 @@ class SubmitFullProposalController {
       req: Request<{}, {}, IFinalSubmissionRequest>,
       res: Response<IFinalSubmissionResponse>
     ): Promise<void> => {
-      const { proposalId, userId } = req.body;
+      const { proposalId } = req.body;
+
+      // Authenticated researcher (set by authenticateResearcherToken)
+      const user = (req as any).user;
+      const userId = user._id.toString();
 
       // Validate proposal exists
       const proposal = await Proposal.findById(proposalId);
@@ -253,16 +266,7 @@ class SubmitFullProposalController {
         return;
       }
 
-      // Validate user exists and owns the proposal
-      const user = await User.findById(userId);
-      if (!user) {
-        res.status(404).json({
-          success: false,
-          message: 'User not found',
-        });
-        return;
-      }
-
+      // Ensure the authenticated user owns the proposal
       if (proposal.submitter.toString() !== userId) {
         res.status(403).json({
           success: false,
@@ -282,15 +286,12 @@ class SubmitFullProposalController {
         return;
       }
 
-      // Check deadline (August 15, 2025)
-      const deadline = new Date('2025-08-15T22:59:59.999Z');
-      const now = new Date();
-
-      if (now > deadline) {
+      // Enforce the admin-configured submission window
+      const window = await resolveWindow('final_submission');
+      if (!window.isOpen) {
         res.status(400).json({
           success: false,
-          message:
-            'The deadline for final submission (August 15, 2025) has passed',
+          message: buildClosedMessage('final submissions', window.closesAt),
         });
         return;
       }
@@ -312,7 +313,9 @@ class SubmitFullProposalController {
       fullProposal.finalSubmission = finalSubmissionUrl;
       fullProposal.submitted = true;
       fullProposal.finalSubmittedAt = new Date();
-      fullProposal.finalSubmissionDeadline = deadline;
+      if (window.closesAt) {
+        fullProposal.finalSubmissionDeadline = window.closesAt;
+      }
 
       await fullProposal.save();
 
@@ -350,7 +353,7 @@ class SubmitFullProposalController {
           'Final submission completed successfully. Remember to also submit the physical documents at the DRID office.',
         data: {
           fullProposalId: (fullProposal._id as Types.ObjectId).toString(),
-          deadline: deadline.toISOString(),
+          deadline: window.closesAt ? window.closesAt.toISOString() : null,
         },
       });
     }
@@ -383,9 +386,10 @@ class SubmitFullProposalController {
         return;
       }
 
-      const deadline = new Date('2025-08-15T22:59:59.999Z');
+      const window = await resolveWindow('final_submission');
+      const isWithinDeadline = window.isOpen;
+      const closesAt = window.closesAt;
       const now = new Date();
-      const isWithinDeadline = now <= deadline;
       const isApproved = fullProposal.status === 'approved';
       const hasSubmitted = fullProposal.submitted;
 
@@ -396,10 +400,8 @@ class SubmitFullProposalController {
           isApproved,
           hasSubmitted,
           isWithinDeadline,
-          deadline: deadline.toISOString(),
-          daysRemaining: isWithinDeadline ? Math.ceil(
-            (deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-          ) : 0,
+          deadline: closesAt ? closesAt.toISOString() : null,
+          daysRemaining: computeDaysRemaining(closesAt, isWithinDeadline, now),
           reviewComments: fullProposal.reviewComments,
         },
       });

@@ -5,6 +5,7 @@
   "scripts": {
     "seed:admin": "ts-node src/scripts/createAdmin.ts",
     "migrate:faculty": "ts-node src/scripts/migrateFacultyDepartmentToNames.ts",
+    "migrate:cs-faculty": "ts-node src/scripts/migrateComputerScienceFaculty.ts",
     "migrate:uploads": "ts-node src/scripts/migrateUploads.ts",
     "clean": "rimraf dist",
     "lint": "eslint \"src/**/*.{ts,js}\"",

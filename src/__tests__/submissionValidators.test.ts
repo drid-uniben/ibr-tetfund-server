@@ -8,7 +8,7 @@ const validStaffBody = {
   fullName: 'Ada Lovelace',
   academicTitle: 'Professor',
   faculty: 'Faculty of Physical Sciences',
-  department: 'Department of Computer Science',
+  department: 'Department of Chemistry',
   email: 'ada@physci.uniben.edu',
   phoneNumber: '08012345678',
   projectTitle: 'A study of analytical engines',
