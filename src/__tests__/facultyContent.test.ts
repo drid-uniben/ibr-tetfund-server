@@ -11,7 +11,7 @@ import {
 
 describe('facultyContent dataset', () => {
   it('contains the expected set of curated academic units', () => {
-    expect(academicUnits).toHaveLength(39);
+    expect(academicUnits).toHaveLength(40);
   });
 
   it('excludes non-academic exam/cert bodies (JUPEB, CBT, CERTIFICATES)', () => {
@@ -70,7 +70,7 @@ describe('isValidUnitDepartment', () => {
     expect(
       isValidUnitDepartment(
         'Faculty of Physical Sciences',
-        'Department of Computer Science'
+        'Department of Chemistry'
       )
     ).toBe(true);
   });
@@ -79,6 +79,19 @@ describe('isValidUnitDepartment', () => {
     expect(
       isValidUnitDepartment('Faculty of Physical Sciences', 'Department of Law')
     ).toBe(false);
+  });
+
+  it('resolves Computer Science under Faculty of Computing, not Physical Sciences', () => {
+    expect(
+      isValidUnitDepartment('Faculty of Computing', 'Department of Computer Science')
+    ).toBe(true);
+    expect(
+      isValidUnitDepartment(
+        'Faculty of Physical Sciences',
+        'Department of Computer Science'
+      )
+    ).toBe(false);
+    expect(findUnitByCode('CIS')?.title).toBe('Faculty of Computing');
   });
 
   it('rejects an unknown unit', () => {

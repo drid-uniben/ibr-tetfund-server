@@ -12,6 +12,10 @@
  * then hand-maintained. Edit here directly to add or correct a unit.
  */
 
+/* eslint-disable max-lines -- pure data file that grows as UNIBEN adds/moves
+ * units and departments; the one-entry-per-line style below is intentional
+ * for reviewable diffs, so line-count is not a useful quality signal here. */
+
 export type AcademicUnitType =
   | 'faculty'
   | 'school'
@@ -66,6 +70,19 @@ export const academicUnits: AcademicUnit[] = [
       { code: 'PHL', title: 'Department of Philosophy' },
       { code: 'REL', title: 'Department of Religions' },
       { code: 'THR', title: 'Department of Theatre Arts' },
+    ],
+  },
+  {
+    code: 'CIS',
+    title: 'Faculty of Computing',
+    type: 'faculty',
+    departments: [
+      { code: 'CSC', title: 'Department of Computer Science' },
+      { code: 'CYB', title: 'Department of Cyber Security' },
+      { code: 'DTS', title: 'Department of Data Science' },
+      { code: 'ICT', title: 'Department of Information and Communication Technology' },
+      { code: 'ITY', title: 'Department of Information Technology' },
+      { code: 'SEN', title: 'Department of Software Engineering' },
     ],
   },
   {
@@ -367,7 +384,6 @@ export const academicUnits: AcademicUnit[] = [
     type: 'faculty',
     departments: [
       { code: 'CHM', title: 'Department of Chemistry' },
-      { code: 'CSC', title: 'Department of Computer Science' },
       { code: 'GLY', title: 'Department of Geology' },
       { code: 'MTH', title: 'Department of Mathematics' },
       { code: 'PHY', title: 'Department of Physics' },

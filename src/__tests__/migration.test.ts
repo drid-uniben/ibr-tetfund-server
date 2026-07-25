@@ -37,8 +37,8 @@ describe('migrateFacultyDepartment', () => {
     });
     await db.collection('departments').insertOne({
       _id: deptId,
-      code: 'CSC',
-      title: 'Department of Computer Science',
+      code: 'CHM',
+      title: 'Department of Chemistry',
     });
     await db.collection('Users_2').insertOne({
       _id: userId,
@@ -52,7 +52,7 @@ describe('migrateFacultyDepartment', () => {
     expect(result.updated).toBe(1);
     const migrated = await db.collection('Users_2').findOne({ _id: userId });
     expect(migrated?.faculty).toBe('Faculty of Physical Sciences');
-    expect(migrated?.department).toBe('Department of Computer Science');
+    expect(migrated?.department).toBe('Department of Chemistry');
     expect(result.warnings).toHaveLength(0);
   });
 

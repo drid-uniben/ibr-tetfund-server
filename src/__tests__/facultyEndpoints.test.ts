@@ -51,7 +51,7 @@ describe('GET /departments', () => {
     const res = await request(app).get('/departments/by-faculty-code/PSC');
     expect(res.status).toBe(200);
     const titles = res.body.map((d: { title: string }) => d.title);
-    expect(titles).toContain('Department of Computer Science');
+    expect(titles).toContain('Department of Chemistry');
     for (const d of res.body) {
       expect(d.faculty).toBe('Faculty of Physical Sciences');
     }
