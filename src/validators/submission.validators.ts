@@ -62,16 +62,20 @@ export const staffProposalSchema = z.object({
       backgroundProblem: z
         .string()
         .min(10, { message: 'Background problem statement is required' })
-        .max(200, {
-          message: 'Background problem statement must not exceed 200 words',
-        }),
+        .refine(
+          (v) => v.trim().split(/\s+/).filter(Boolean).length <= 200,
+          { message: 'Background problem statement must not exceed 200 words' },
+        ),
       researchObjectives: z
         .string()
         .min(10, { message: 'Research objectives are required' }),
       methodologyOverview: z
         .string()
         .min(10, { message: 'Methodology overview is required' })
-        .max(250, { message: 'Methodology overview must not exceed 250 words' }),
+        .refine(
+          (v) => v.trim().split(/\s+/).filter(Boolean).length <= 250,
+          { message: 'Methodology overview must not exceed 250 words' },
+        ),
       expectedOutcomes: z
         .string()
         .min(10, { message: 'Expected outcomes are required' }),
