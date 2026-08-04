@@ -10,7 +10,7 @@ const facultyValidator = z
 const emailValidator = z
   .string()
   .email({ message: 'Invalid email address' })
-  .regex(/^.+@.+\.uniben\.edu$/, {
+  .regex(/^[a-zA-Z0-9._%+-]+@([a-zA-Z0-9-]+\.)*uniben\.edu$/i, {
     message: 'Please provide a valid UNIBEN email address',
   });
 
@@ -50,7 +50,9 @@ export const staffProposalSchema = z.object({
       fullName: z
         .string()
         .min(2, { message: 'Full name must be at least 2 characters' }),
-      academicTitle: z.string().min(2, { message: 'Academic title is required' }),
+      academicTitle: z
+        .string()
+        .min(2, { message: 'Academic title is required' }),
       department: z.string().optional(),
       faculty: facultyValidator,
       email: emailValidator,
@@ -62,20 +64,18 @@ export const staffProposalSchema = z.object({
       backgroundProblem: z
         .string()
         .min(10, { message: 'Background problem statement is required' })
-        .refine(
-          (v) => v.trim().split(/\s+/).filter(Boolean).length <= 200,
-          { message: 'Background problem statement must not exceed 200 words' },
-        ),
+        .refine((v) => v.trim().split(/\s+/).filter(Boolean).length <= 200, {
+          message: 'Background problem statement must not exceed 200 words',
+        }),
       researchObjectives: z
         .string()
         .min(10, { message: 'Research objectives are required' }),
       methodologyOverview: z
         .string()
         .min(10, { message: 'Methodology overview is required' })
-        .refine(
-          (v) => v.trim().split(/\s+/).filter(Boolean).length <= 250,
-          { message: 'Methodology overview must not exceed 250 words' },
-        ),
+        .refine((v) => v.trim().split(/\s+/).filter(Boolean).length <= 250, {
+          message: 'Methodology overview must not exceed 250 words',
+        }),
       expectedOutcomes: z
         .string()
         .min(10, { message: 'Expected outcomes are required' }),

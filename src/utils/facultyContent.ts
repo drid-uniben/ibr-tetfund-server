@@ -46,13 +46,22 @@ export const academicUnits: AcademicUnit[] = [
     title: 'Faculty of Agriculture',
     type: 'faculty',
     departments: [
-      { code: 'AEE', title: 'Department of Agricultural Economics & Ext. Services' },
+      {
+        code: 'AEE',
+        title: 'Department of Agricultural Economics & Ext. Services',
+      },
       { code: 'ANS', title: 'Department of Animal Science' },
       { code: 'CRS', title: 'Department of Crop science' },
-      { code: 'FIS', title: 'Department of Aquaculture and Fisheries Management' },
+      {
+        code: 'FIS',
+        title: 'Department of Aquaculture and Fisheries Management',
+      },
       { code: 'FOD', title: 'Department of Food Science and Nutrition' },
       { code: 'FOW', title: 'Department of Forestry and Wildlife' },
-      { code: 'FWM', title: 'Department of Forest Resources and Wildlife Management' },
+      {
+        code: 'FWM',
+        title: 'Department of Forest Resources and Wildlife Management',
+      },
       { code: 'SOS', title: 'Department of Soil Science' },
     ],
   },
@@ -80,7 +89,10 @@ export const academicUnits: AcademicUnit[] = [
       { code: 'CSC', title: 'Department of Computer Science' },
       { code: 'CYB', title: 'Department of Cyber Security' },
       { code: 'DTS', title: 'Department of Data Science' },
-      { code: 'ICT', title: 'Department of Information and Communication Technology' },
+      {
+        code: 'ICT',
+        title: 'Department of Information and Communication Technology',
+      },
       { code: 'ITY', title: 'Department of Information Technology' },
       { code: 'SEN', title: 'Department of Software Engineering' },
     ],
@@ -91,10 +103,19 @@ export const academicUnits: AcademicUnit[] = [
     type: 'school',
     departments: [
       { code: 'CHP', title: 'Department of Chemical Pathology' },
-      { code: 'CPT', title: 'Department of Clinical Pharmacology and Therapeutics' },
+      {
+        code: 'CPT',
+        title: 'Department of Clinical Pharmacology and Therapeutics',
+      },
       { code: 'HBS', title: 'Department of Haematology and Blood Transfusion' },
-      { code: 'MMP', title: 'Department of Medical Microbiology and Parasitology' },
-      { code: 'PAF', title: 'Department of Pathology (Anatomic and Forensic Pathology)' },
+      {
+        code: 'MMP',
+        title: 'Department of Medical Microbiology and Parasitology',
+      },
+      {
+        code: 'PAF',
+        title: 'Department of Pathology (Anatomic and Forensic Pathology)',
+      },
     ],
   },
   {
@@ -122,7 +143,10 @@ export const academicUnits: AcademicUnit[] = [
     title: 'Centre for Forensic Programmes and DNA Studies',
     type: 'centre',
     departments: [
-      { code: 'FPDS', title: 'Department of Forensic Programmes and DNA Studies' },
+      {
+        code: 'FPDS',
+        title: 'Department of Forensic Programmes and DNA Studies',
+      },
     ],
   },
   {
@@ -161,11 +185,24 @@ export const academicUnits: AcademicUnit[] = [
     title: 'College of Petroleum and Gas Engineering, PTI Campus',
     type: 'college',
     departments: [
-      { code: 'CPP', title: 'Department of Chemical and Process Engineering, PTI Campus' },
-      { code: 'EEP', title: 'Department of Electric/Electronics Engineering, PTI Campus' },
+      {
+        code: 'CPP',
+        title: 'Department of Chemical and Process Engineering, PTI Campus',
+      },
+      {
+        code: 'EEP',
+        title: 'Department of Electric/Electronics Engineering, PTI Campus',
+      },
       { code: 'GEP', title: 'Department of Gas Engineering, PTI Campus' },
-      { code: 'IEP', title: 'Department of Industrial and Environemntal Engineering, PTI, Campus' },
-      { code: 'MEP', title: 'Department of Mechanical Engineering, PTI Campus' },
+      {
+        code: 'IEP',
+        title:
+          'Department of Industrial and Environemntal Engineering, PTI, Campus',
+      },
+      {
+        code: 'MEP',
+        title: 'Department of Mechanical Engineering, PTI Campus',
+      },
       { code: 'PEP', title: 'Department of Petroleum Engineering, PTI Campus' },
     ],
   },
@@ -205,9 +242,18 @@ export const academicUnits: AcademicUnit[] = [
     type: 'school',
     departments: [
       { code: 'CDH', title: 'Department of Community Dental Health' },
-      { code: 'ODR', title: 'Department of Oral Diagnosis & Maxillofacial Radiology' },
-      { code: 'OMPM', title: 'Department of Oral & Maxillofacial Pathology and Medicine' },
-      { code: 'OSP', title: 'Department of Oral & Maxillofacial Surgery (OMS)' },
+      {
+        code: 'ODR',
+        title: 'Department of Oral Diagnosis & Maxillofacial Radiology',
+      },
+      {
+        code: 'OMPM',
+        title: 'Department of Oral & Maxillofacial Pathology and Medicine',
+      },
+      {
+        code: 'OSP',
+        title: 'Department of Oral & Maxillofacial Surgery (OMS)',
+      },
       { code: 'OTD', title: 'Department of Orthodontics' },
       { code: 'PAE', title: 'Department of ⁠Paedodontics' },
       { code: 'PER', title: 'Department of Periodontics' },
@@ -220,20 +266,51 @@ export const academicUnits: AcademicUnit[] = [
     title: 'Faculty of Education',
     type: 'faculty',
     departments: [
-      { code: 'ADT', title: 'Department of Continuing Education and Development Studies' },
-      { code: 'CIT', title: 'Department of Curriculum and Instructional Technology' },
+      {
+        code: 'ADT',
+        title: 'Department of Continuing Education and Development Studies',
+      },
+      {
+        code: 'CIT',
+        title: 'Department of Curriculum and Instructional Technology',
+      },
       { code: 'DEF', title: 'Department of Educational Foundations' },
       { code: 'DEM', title: 'Department of Educational Management' },
-      { code: 'EECP', title: 'Department of Educational Evaluation and Counselling Psychology' },
-      { code: 'EPCS', title: 'Department of Educational Psychology & Curr. Studies' },
-      { code: 'HEK', title: 'Department of Health Environmental Education and Human Kinetics' },
+      {
+        code: 'EECP',
+        title:
+          'Department of Educational Evaluation and Counselling Psychology',
+      },
+      {
+        code: 'EPCS',
+        title: 'Department of Educational Psychology & Curr. Studies',
+      },
+      {
+        code: 'HEK',
+        title:
+          'Department of Health Environmental Education and Human Kinetics',
+      },
       { code: 'HKS', title: 'Department of Human Kinetics and Sports Science' },
-      { code: 'HSE', title: 'Department of Health, Safety and Environmental Education' },
+      {
+        code: 'HSE',
+        title: 'Department of Health, Safety and Environmental Education',
+      },
       { code: 'VTE', title: 'Department of Vocational & Technical Education' },
-      { code: 'AED', title: 'Department of Agricultural Science Education and Fine and Applied Arts Education' },
+      {
+        code: 'AED',
+        title:
+          'Department of Agricultural Science Education and Fine and Applied Arts Education',
+      },
       { code: 'BED', title: 'Department of Business Education' },
-      { code: 'HEE', title: 'Department of Home Economics, Hospitality and Tourism Education' },
-      { code: 'ITE', title: 'Department of Industrial and Technical Education' },
+      {
+        code: 'HEE',
+        title:
+          'Department of Home Economics, Hospitality and Tourism Education',
+      },
+      {
+        code: 'ITE',
+        title: 'Department of Industrial and Technical Education',
+      },
     ],
   },
   {
@@ -245,23 +322,27 @@ export const academicUnits: AcademicUnit[] = [
       { code: 'CHE', title: 'Department of Chemical Engineering' },
       { code: 'CPE', title: 'Department of Computer Engineering' },
       { code: 'CVE', title: 'Department of Civil Engineering' },
-    ],
-  },
-  {
-    code: 'DMIC',
-    title: 'Centre for Maritime Studies, Information & Communication Technology',
-    type: 'centre',
-    departments: [
-      { code: 'EEE', title: 'Department of Electrical/Electronics' },
-      { code: 'GME', title: 'Department of Surveying & Geoinformatics' },
       { code: 'IDE', title: 'Department of Industrial Engineering' },
       { code: 'MAR', title: 'Department of Marine Engineering' },
-      { code: 'MAT', title: 'Department of Materials & Metallurgical Engineering' },
+      {
+        code: 'MAT',
+        title: 'Department of Materials & Metallurgical Engineering',
+      },
       { code: 'MCH', title: 'Department of Mechanical Engineering' },
       { code: 'MTE', title: 'Department of Mechatronics Engineering' },
       { code: 'PEE', title: 'Department of Petroleum Engineering' },
       { code: 'PRE', title: 'Department of Production Engineering' },
       { code: 'STE', title: 'Department of Structural Engineering' },
+    ],
+  },
+  {
+    code: 'DMIC',
+    title:
+      'Centre for Maritime Studies, Information & Communication Technology',
+    type: 'centre',
+    departments: [
+      { code: 'EEE', title: 'Department of Electrical/Electronics' },
+      { code: 'GME', title: 'Department of Surveying & Geoinformatics' },
     ],
   },
   {
@@ -286,9 +367,7 @@ export const academicUnits: AcademicUnit[] = [
     code: 'GST',
     title: 'Office for General Studies',
     type: 'other',
-    departments: [
-      { code: 'GST', title: 'Department of General Studies' },
-    ],
+    departments: [{ code: 'GST', title: 'Department of General Studies' }],
   },
   {
     code: 'LAW',
@@ -296,7 +375,10 @@ export const academicUnits: AcademicUnit[] = [
     type: 'faculty',
     departments: [
       { code: 'BUL', title: 'Department of Business Law' },
-      { code: 'JIL', title: 'Department of Jurisprudence and International Law' },
+      {
+        code: 'JIL',
+        title: 'Department of Jurisprudence and International Law',
+      },
       { code: 'PPL', title: 'Department of Private and Property Law' },
       { code: 'PUL', title: 'Department of Public Law' },
     ],
@@ -310,7 +392,10 @@ export const academicUnits: AcademicUnit[] = [
       { code: 'AGP', title: 'Department of Applied Geophysics' },
       { code: 'BCH', title: 'Department of Biochemistry' },
       { code: 'BOT', title: 'Department of Botany' },
-      { code: 'EMT', title: 'Department of Environmental Management & Toxicology' },
+      {
+        code: 'EMT',
+        title: 'Department of Environmental Management & Toxicology',
+      },
       { code: 'EVL', title: 'Department of Enviromental Science' },
       { code: 'MCB', title: 'Department of Microbiology' },
       { code: 'OPT', title: 'Department of Optometry' },
@@ -327,12 +412,18 @@ export const academicUnits: AcademicUnit[] = [
       { code: 'ANT', title: 'Department of Anatomy' },
       { code: 'ANY', title: 'Department of Anaesthesiology' },
       { code: 'CHH', title: 'Department of Child Health' },
-      { code: 'COH', title: 'Department of Public Health and Community Medicine' },
+      {
+        code: 'COH',
+        title: 'Department of Public Health and Community Medicine',
+      },
       { code: 'HAE', title: 'Department of Haematology' },
       { code: 'MED', title: 'Department of Medicine' },
       { code: 'MEH', title: 'Department of Mental Health' },
       { code: 'SUR', title: 'Department of Surgery' },
-      { code: 'CERHI', title: 'Department of Excellence in Reproductive Health Innovation' },
+      {
+        code: 'CERHI',
+        title: 'Department of Excellence in Reproductive Health Innovation',
+      },
     ],
   },
   {
@@ -370,12 +461,21 @@ export const academicUnits: AcademicUnit[] = [
     departments: [
       { code: 'PCG', title: 'Department of Pharmacognosy' },
       { code: 'PCH', title: 'Department of Pharmaceutical Chemistry' },
-      { code: 'PCN', title: 'Department of Clinical Pharmacy & Pharmacy Practice' },
+      {
+        code: 'PCN',
+        title: 'Department of Clinical Pharmacy & Pharmacy Practice',
+      },
       { code: 'PCO', title: 'Department of Pharmacology and Toxicology' },
-      { code: 'PCT', title: 'Department of Pharmaceutics & Pharmaceutical Technology' },
+      {
+        code: 'PCT',
+        title: 'Department of Pharmaceutics & Pharmaceutical Technology',
+      },
       { code: 'PHA', title: 'Department of Pharmacy' },
       { code: 'PHM', title: 'Department of Pharmaceutical Mathematics' },
-      { code: 'PMB', title: 'Department of Pharmaceutical Microbiology and Biotechnology' },
+      {
+        code: 'PMB',
+        title: 'Department of Pharmaceutical Microbiology and Biotechnology',
+      },
     ],
   },
   {
@@ -394,17 +494,13 @@ export const academicUnits: AcademicUnit[] = [
     code: 'SAGMS',
     title: 'St. Albert The Great Major Seminary',
     type: 'other',
-    departments: [
-      { code: 'PABK', title: 'Department of Philosophy (SAGMS)' },
-    ],
+    departments: [{ code: 'PABK', title: 'Department of Philosophy (SAGMS)' }],
   },
   {
     code: 'SAS',
     title: 'All Saints Ekpoma',
     type: 'other',
-    departments: [
-      { code: 'PAS', title: 'Department of Philosophy (SAS)' },
-    ],
+    departments: [{ code: 'PAS', title: 'Department of Philosophy (SAS)' }],
   },
   {
     code: 'SCN',
@@ -418,11 +514,10 @@ export const academicUnits: AcademicUnit[] = [
   },
   {
     code: 'SPESSE',
-    title: 'Centre for SUSTAINABLE PROCUREMENT, ENVIRONMENTAL & SOCIAL STANDARDS ENHANCEMENT (SPESSE)',
+    title:
+      'Centre for SUSTAINABLE PROCUREMENT, ENVIRONMENTAL & SOCIAL STANDARDS ENHANCEMENT (SPESSE)',
     type: 'centre',
-    departments: [
-      { code: 'SPESSE', title: 'Department of SPESSE' },
-    ],
+    departments: [{ code: 'SPESSE', title: 'Department of SPESSE' }],
   },
   {
     code: 'SSC',
@@ -439,25 +534,28 @@ export const academicUnits: AcademicUnit[] = [
   },
   {
     code: 'INP',
-    title: 'Institute of Public Administration and Health Services Management (IPAHSM)',
+    title:
+      'Institute of Public Administration and Health Services Management (IPAHSM)',
     type: 'institute',
     departments: [],
   },
   {
     code: 'UBITS',
-    title: 'Office for University of Benin Industrial Training and Graded Reports Scheme',
+    title:
+      'Office for University of Benin Industrial Training and Graded Reports Scheme',
     type: 'other',
     departments: [
-      { code: 'UBITS', title: 'Department of University of Benin Industrial Training Scheme' },
+      {
+        code: 'UBITS',
+        title: 'Department of University of Benin Industrial Training Scheme',
+      },
     ],
   },
   {
     code: 'VNM',
     title: 'Faculty of Veterinary Medicine',
     type: 'faculty',
-    departments: [
-      { code: 'VNM', title: 'Department of Veterinary Medicine' },
-    ],
+    departments: [{ code: 'VNM', title: 'Department of Veterinary Medicine' }],
   },
 ];
 
