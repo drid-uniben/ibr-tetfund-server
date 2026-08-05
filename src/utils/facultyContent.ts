@@ -86,14 +86,14 @@ export const academicUnits: AcademicUnit[] = [
     title: 'Faculty of Computing',
     type: 'faculty',
     departments: [
+      { code: 'CBS', title: 'Department of Cyber Security' },
       { code: 'CSC', title: 'Department of Computer Science' },
-      { code: 'CYB', title: 'Department of Cyber Security' },
-      { code: 'DTS', title: 'Department of Data Science' },
+      { code: 'DSC', title: 'Department of Data Science' },
       {
         code: 'ICT',
         title: 'Department of Information and Communication Technology',
       },
-      { code: 'ITY', title: 'Department of Information Technology' },
+      { code: 'INT', title: 'Department of Information Technology' },
       { code: 'SEN', title: 'Department of Software Engineering' },
     ],
   },
@@ -241,7 +241,7 @@ export const academicUnits: AcademicUnit[] = [
     title: 'School of Dentistry',
     type: 'school',
     departments: [
-      { code: 'CDH', title: 'Department of Community Dental Health' },
+      { code: 'DPV', title: 'Department of Preventive Dentistry' },
       {
         code: 'ODR',
         title: 'Department of Oral Diagnosis & Maxillofacial Radiology',
@@ -254,10 +254,10 @@ export const academicUnits: AcademicUnit[] = [
         code: 'OSP',
         title: 'Department of Oral & Maxillofacial Surgery (OMS)',
       },
-      { code: 'OTD', title: 'Department of Orthodontics' },
-      { code: 'PAE', title: 'Department of ⁠Paedodontics' },
+      { code: 'ORT', title: 'Department of Orthodontics' },
+      { code: 'PAE', title: 'Department of Paedodontics' },
       { code: 'PER', title: 'Department of Periodontics' },
-      { code: 'PTD', title: 'Department of Prosthodontics' },
+      { code: 'PRO', title: 'Department of Prosthodontics' },
       { code: 'RES', title: 'Department of Restorative Dentistry' },
     ],
   },
@@ -266,10 +266,7 @@ export const academicUnits: AcademicUnit[] = [
     title: 'Faculty of Education',
     type: 'faculty',
     departments: [
-      {
-        code: 'ADT',
-        title: 'Department of Continuing Education and Development Studies',
-      },
+      { code: 'ADT', title: 'Department of Adult & Non Formal Education' },
       {
         code: 'CIT',
         title: 'Department of Curriculum and Instructional Technology',
@@ -286,6 +283,10 @@ export const academicUnits: AcademicUnit[] = [
         title: 'Department of Educational Psychology & Curr. Studies',
       },
       {
+        code: 'ESM',
+        title: 'Department of Educational Studies and Management',
+      },
+      {
         code: 'HEK',
         title:
           'Department of Health Environmental Education and Human Kinetics',
@@ -295,7 +296,40 @@ export const academicUnits: AcademicUnit[] = [
         code: 'HSE',
         title: 'Department of Health, Safety and Environmental Education',
       },
-      { code: 'VTE', title: 'Department of Vocational & Technical Education' },
+    ],
+  },
+  {
+    code: 'ENG',
+    title: 'Faculty of Engineering',
+    type: 'faculty',
+    departments: [
+      { code: 'AGE', title: 'Department of Agricultural Engineering' },
+      { code: 'CHE', title: 'Department of Chemical Engineering' },
+      { code: 'CPE', title: 'Department of Computer Engineering' },
+      { code: 'CVE', title: 'Department of Civil Engineering' },
+      {
+        code: 'EEE',
+        title: 'Department of Electrical/Electronics Engineering',
+      },
+      { code: 'GME', title: 'Department of Surveying & Geoinformatics' },
+      { code: 'IDE', title: 'Department of Industrial Engineering' },
+      { code: 'MAR', title: 'Department of Marine Engineering' },
+      {
+        code: 'MAT',
+        title: 'Department of Materials & Metallurgical Engineering',
+      },
+      { code: 'MCH', title: 'Department of Mechanical Engineering' },
+      { code: 'MTE', title: 'Department of Mechatronics Engineering' },
+      { code: 'PEE', title: 'Department of Petroleum Engineering' },
+      { code: 'PRE', title: 'Department of Production Engineering' },
+      { code: 'STE', title: 'Department of Structural Engineering' },
+    ],
+  },
+  {
+    code: 'VTE',
+    title: 'Faculty of Vocational and Technical Education',
+    type: 'faculty',
+    departments: [
       {
         code: 'AED',
         title:
@@ -314,35 +348,49 @@ export const academicUnits: AcademicUnit[] = [
     ],
   },
   {
-    code: 'ENG',
-    title: 'Faculty of Engineering',
+    code: 'SLT',
+    title: 'Faculty of Science Laboratory Technology',
     type: 'faculty',
     departments: [
-      { code: 'AGE', title: 'Department of Agricultural Engineering' },
-      { code: 'CHE', title: 'Department of Chemical Engineering' },
-      { code: 'CPE', title: 'Department of Computer Engineering' },
-      { code: 'CVE', title: 'Department of Civil Engineering' },
-      { code: 'IDE', title: 'Department of Industrial Engineering' },
-      { code: 'MAR', title: 'Department of Marine Engineering' },
       {
-        code: 'MAT',
-        title: 'Department of Materials & Metallurgical Engineering',
+        code: 'ACST',
+        title: 'Department of Applied Chemical Science Technology',
       },
-      { code: 'MCH', title: 'Department of Mechanical Engineering' },
-      { code: 'MTE', title: 'Department of Mechatronics Engineering' },
-      { code: 'PEE', title: 'Department of Petroleum Engineering' },
-      { code: 'PRE', title: 'Department of Production Engineering' },
-      { code: 'STE', title: 'Department of Structural Engineering' },
+      {
+        code: 'BSLT',
+        title: 'Department of Biomedical Science Laboratory Technology',
+      },
+      {
+        code: 'GSLT',
+        title: 'Department of Geophysical Science Laboratory Technology',
+      },
+      {
+        code: 'NSLT',
+        title: 'Department of Natural Science Laboratory Technology',
+      },
     ],
   },
   {
-    code: 'DMIC',
-    title:
-      'Centre for Maritime Studies, Information & Communication Technology',
+    code: 'MCS',
+    title: 'Faculty of Media and Communication Studies',
+    type: 'faculty',
+    departments: [],
+  },
+  {
+    code: 'NSC',
+    title: 'Faculty of Nursing Sciences',
+    type: 'faculty',
+    departments: [],
+  },
+  {
+    code: 'CERHI',
+    title: 'Centre of Excellence in Reproductive Health Innovation',
     type: 'centre',
     departments: [
-      { code: 'EEE', title: 'Department of Electrical/Electronics' },
-      { code: 'GME', title: 'Department of Surveying & Geoinformatics' },
+      { code: 'CHT', title: 'Department of Community Health' },
+      { code: 'ECN', title: 'Department of Economics (CERHI)' },
+      { code: 'NUR', title: 'Department of Nursing (CERHI)' },
+      { code: 'OAG', title: 'Department of Obstetrics and Gynaecology' },
     ],
   },
   {
@@ -375,10 +423,12 @@ export const academicUnits: AcademicUnit[] = [
     type: 'faculty',
     departments: [
       { code: 'BUL', title: 'Department of Business Law' },
+      { code: 'CIL', title: 'Department of Commercial Law' },
       {
         code: 'JIL',
         title: 'Department of Jurisprudence and International Law',
       },
+      { code: 'LAW', title: 'Department of Law' },
       { code: 'PPL', title: 'Department of Private and Property Law' },
       { code: 'PUL', title: 'Department of Public Law' },
     ],
@@ -420,10 +470,6 @@ export const academicUnits: AcademicUnit[] = [
       { code: 'MED', title: 'Department of Medicine' },
       { code: 'MEH', title: 'Department of Mental Health' },
       { code: 'SUR', title: 'Department of Surgery' },
-      {
-        code: 'CERHI',
-        title: 'Department of Excellence in Reproductive Health Innovation',
-      },
     ],
   },
   {
@@ -459,6 +505,7 @@ export const academicUnits: AcademicUnit[] = [
     title: 'Faculty of Pharmacy',
     type: 'faculty',
     departments: [
+      { code: 'IHCM', title: 'Institute of Herbal and Complimentary Medicine' },
       { code: 'PCG', title: 'Department of Pharmacognosy' },
       { code: 'PCH', title: 'Department of Pharmaceutical Chemistry' },
       {
@@ -525,7 +572,15 @@ export const academicUnits: AcademicUnit[] = [
     type: 'faculty',
     departments: [
       { code: 'ECO', title: 'Department of Economics' },
-      { code: 'GEO', title: 'Department of Geography and Regional Planning' },
+      {
+        code: 'GEO',
+        title: 'Department of Geography and Disaster Risk Management',
+      },
+      { code: 'LIS', title: 'Department of Library and Information Science' },
+      {
+        code: 'PCR',
+        title: 'Department of Peace Studies and Conflict Resolution',
+      },
       { code: 'POL', title: 'Department of Political Science' },
       { code: 'PUB', title: 'Department of Public Administration' },
       { code: 'SAA', title: 'Department of Sociology & Anthropology' },

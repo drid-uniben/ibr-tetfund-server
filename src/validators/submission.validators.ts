@@ -60,7 +60,8 @@ export const staffProposalSchema = z.object({
       phoneNumber: phoneValidator,
       projectTitle: z
         .string()
-        .min(5, { message: 'Project title must be at least 5 characters' }),
+        .min(5, { message: 'Project title must be at least 5 characters' })
+        .max(300, { message: 'Project title must not exceed 300 characters' }),
       backgroundProblem: z
         .string()
         .min(10, { message: 'Background problem statement is required' })
