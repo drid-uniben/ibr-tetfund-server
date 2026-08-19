@@ -90,7 +90,7 @@ class ReviewerController {
   // Complete reviewer profile from invitation
   completeReviewerProfile = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      const { token } = req.params;
+      const token = req.params.token as string;
       const {
         name,
         faculty,
@@ -428,7 +428,7 @@ class ReviewerController {
         );
       }
 
-      const { id } = req.params;
+      const id = req.params.id as string;
 
       // Validate ObjectId format
       if (!Types.ObjectId.isValid(id)) {

@@ -355,7 +355,7 @@ class ProposalReviewsController {
       res: Response<IProposalReviewsResponse>
     ): Promise<void> => {
       const user = (req as GetProposalReviewDetailsRequest).user;
-      const { proposalId } = req.params;
+      const proposalId = req.params.proposalId as string;
 
       // Validate proposalId format
       if (!mongoose.Types.ObjectId.isValid(proposalId)) {
