@@ -407,7 +407,7 @@ export const academicUnits: AcademicUnit[] = [
   },
   {
     code: 'FLC',
-    title: 'Fench Language Centre',
+    title: 'French Language Centre',
     type: 'centre',
     departments: [],
   },
@@ -416,6 +416,12 @@ export const academicUnits: AcademicUnit[] = [
     title: 'Office for General Studies',
     type: 'other',
     departments: [{ code: 'GST', title: 'Department of General Studies' }],
+  },
+  {
+    code: 'INE',
+    title: 'Institute of Education',
+    type: 'institute',
+    departments: [],
   },
   {
     code: 'LAW',
@@ -469,6 +475,7 @@ export const academicUnits: AcademicUnit[] = [
       { code: 'HAE', title: 'Department of Haematology' },
       { code: 'MED', title: 'Department of Medicine' },
       { code: 'MEH', title: 'Department of Mental Health' },
+      { code: 'PHS', title: 'Department of Physiology' },
       { code: 'SUR', title: 'Department of Surgery' },
     ],
   },
