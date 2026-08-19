@@ -30,7 +30,7 @@ router.get(
   authenticateAdminToken,
   validateRequest(proposalIdSchema),
   asyncHandler(async (req, res) => {
-    const { proposalId } = req.params;
+    const proposalId = req.params.proposalId as string;
     const result = await reconciliationController.checkReviewDiscrepancies(proposalId);
     res.status(200).json({ success: true, data: result });
   })
@@ -41,7 +41,7 @@ router.post(
   authenticateAdminToken,
   validateRequest(reviewIdSchema),
   asyncHandler(async (req, res) => {
-    const { reviewId } = req.params;
+    const reviewId = req.params.reviewId as string;
     const result = await reconciliationController.processReconciliationReview(reviewId);
     res.status(200).json({ success: true, data: result });
   })
@@ -52,7 +52,7 @@ router.get(
   authenticateAdminToken,
   validateRequest(proposalIdSchema),
   asyncHandler(async (req, res) => {
-    const { proposalId } = req.params;
+    const proposalId = req.params.proposalId as string;
     const result = await reconciliationController.getDiscrepancyDetails(proposalId);
     res.status(200).json({ success: true, data: result });
   })

@@ -34,7 +34,7 @@ class SubmissionWindowController {
   // Public: return a single phase (public-safe fields only)
   getPublicWindow = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      const { phase } = req.params;
+      const phase = req.params.phase as string;
 
       if (!isValidPhase(phase)) {
         res.status(400).json({
@@ -70,9 +70,7 @@ class SubmissionWindowController {
       const rows = await SubmissionWindow.find({
         phase: { $in: SUBMISSION_PHASES },
       });
-      const updatedAtByPhase = new Map(
-        rows.map((r) => [r.phase, r.updatedAt])
-      );
+      const updatedAtByPhase = new Map(rows.map((r) => [r.phase, r.updatedAt]));
 
       res.status(200).json({
         success: true,
@@ -92,7 +90,7 @@ class SubmissionWindowController {
   // Admin: upsert a window for a phase
   upsertWindow = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      const { phase } = req.params;
+      const phase = req.params.phase as string;
 
       if (!isValidPhase(phase)) {
         res.status(400).json({
@@ -130,11 +128,7 @@ class SubmissionWindowController {
         return;
       }
 
-      if (
-        parsedOpensAt &&
-        parsedClosesAt &&
-        parsedClosesAt < parsedOpensAt
-      ) {
+      if (parsedOpensAt && parsedClosesAt && parsedClosesAt < parsedOpensAt) {
         res.status(400).json({
           success: false,
           message: 'closesAt must be on or after opensAt',

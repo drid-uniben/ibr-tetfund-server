@@ -212,7 +212,7 @@ class ReviewController {
   submitReview = asyncHandler(
     async (req: Request, res: Response<IReviewResponse>): Promise<void> => {
       const user = (req as ResearcherAuthenticatedRequest).user;
-      const { id } = req.params;
+      const id = req.params.id as string;
       const reviewerId = user.id; // From auth middleware
       const { scores, comments } = req.body;
 
