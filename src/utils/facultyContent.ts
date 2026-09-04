@@ -424,6 +424,12 @@ export const academicUnits: AcademicUnit[] = [
     departments: [],
   },
   {
+    code: 'ICH',
+    title: 'Institute for Child Health',
+    type: 'institute',
+    departments: [],
+  },
+  {
     code: 'LAW',
     title: 'Faculty of Law',
     type: 'faculty',
