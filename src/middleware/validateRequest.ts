@@ -13,17 +13,23 @@ export type ValidatedRequest<T extends RequestValidationSchema> = Request & {
   validated: z.infer<T>;
 };
 
-export const validateRequest = <T extends RequestValidationSchema>(schema: T) => {
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const validateRequest = <T extends RequestValidationSchema>(
+  schema: T
+) => {
+  return async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const dataToValidate: Record<string, unknown> = {};
-      
+
       if (schema.shape.body) dataToValidate.body = req.body;
       if (schema.shape.query) dataToValidate.query = req.query;
       if (schema.shape.params) dataToValidate.params = req.params;
 
       const validatedData = await schema.parseAsync(dataToValidate);
-      
+
       (req as ValidatedRequest<T>).validated = validatedData;
       next();
     } catch (error) {
@@ -34,7 +40,11 @@ export const validateRequest = <T extends RequestValidationSchema>(schema: T) =>
         }));
 
         logger.warn(`Validation error: ${JSON.stringify(errors)}`);
-        return next(new BadRequestError(errors[0].message));
+        const firstError = errors[0];
+        const formattedMessage = firstError.path
+          ? `${firstError.path}: ${firstError.message}`
+          : firstError.message;
+        return next(new BadRequestError(formattedMessage));
       }
 
       logger.error('Unexpected validation error:', error);
