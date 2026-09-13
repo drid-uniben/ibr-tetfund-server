@@ -19,8 +19,8 @@ const inviteReviewerSchema = z.object({
 const completeProfileSchema = z.object({
   body: z.object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
-    facultyId: z.string().min(1, 'Faculty is required'),
-    departmentId: z.string().min(1, 'Department is required'),
+    faculty: z.string().min(1, 'Faculty is required'),
+    department: z.string().min(1, 'Department is required'),
     phoneNumber: z.string().min(10, 'Please provide a valid phone number'),
     academicTitle: z.string().optional(),
     alternativeEmail: z
@@ -37,8 +37,8 @@ const addReviewerSchema = z.object({
   body: z.object({
     email: z.string().email('Please provide a valid email address'),
     name: z.string().min(2, 'Name must be at least 2 characters'),
-    facultyId: z.string().min(1, 'Faculty is required'),
-    departmentId: z.string().min(1, 'Department is required'),
+    faculty: z.string().min(1, 'Faculty is required'),
+department: z.string().min(1, 'Department is required'),
     phoneNumber: z.string().min(10, 'Please provide a valid phone number'),
     academicTitle: z.string().optional(),
     alternativeEmail: z
