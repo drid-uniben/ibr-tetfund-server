@@ -11,6 +11,10 @@ import emailService from '../../services/email.service';
 import { NotFoundError, BadRequestError } from '../../utils/customErrors';
 import mongoose from 'mongoose';
 import agenda from '../../config/agenda'; // Import agenda
+import {
+  getBypassReviewerIds,
+  isBypassReviewer,
+} from '../../config/bypassReviewers';
 
 interface IReassignReviewResponse {
   success: boolean;
@@ -33,8 +37,6 @@ interface IEligibleReviewersResponse {
 }
 
 class ReassignReviewController {
-  private readonly BYPASS_USER_ID = '68557cdbc6540899e1dc934f';
-
   private clusterMap = {
     // Cluster 1
     'Faculty of Agriculture': [
@@ -200,34 +202,6 @@ class ReassignReviewController {
         throw new NotFoundError('Proposal not found');
       }
 
-      // Check if an AI review exists for this proposal, if not create one
-      // If exists but has zero total score, regenerate it
-      const existingAIReview = await Review.findOne({
-        proposal: proposalId,
-        reviewType: ReviewType.AI,
-      });
-
-      if (!existingAIReview) {
-        logger.info(
-          `No existing AI review found for proposal ${proposalId}. Dispatching job to generate one.`
-        );
-        await agenda.now('generate AI review', { proposalId: proposalId });
-      } else if (existingAIReview.totalScore === 0) {
-        logger.info(
-          `Existing AI review found for proposal ${proposalId} but has zero score. Regenerating AI review.`
-        );
-
-        // Delete the existing AI review with zero score
-        await Review.findByIdAndDelete(existingAIReview._id);
-
-        // Generate a new AI review
-        await agenda.now('generate AI review', { proposalId: proposalId });
-      } else {
-        logger.info(
-          `Valid AI review already exists for proposal ${proposalId} with score ${existingAIReview.totalScore}`
-        );
-      }
-
       let existingReview;
 
       if (reviewId) {
@@ -299,11 +273,25 @@ class ReassignReviewController {
       // Get old reviewer info for logging
       const oldReviewer = await User.findById(existingReview.reviewer);
 
+      // Bypass reviewers review solo: no AI review, no discrepancy check
+      const soloMode = isBypassReviewer(newReviewer._id);
+
       // Update the review with new reviewer
       existingReview.reviewer = newReviewer._id;
       existingReview.status = ReviewStatus.IN_PROGRESS;
       existingReview.dueDate = this.calculateDueDate(5); // Reset due date
+      existingReview.isSoloReview = soloMode;
       await existingReview.save();
+
+      if (soloMode) {
+        logger.info(
+          `Review ${existingReview._id} reassigned to solo reviewer ${newReviewer._id}; AI review skipped`
+        );
+      } else {
+        // Normal reviewer: make sure an AI review exists (also covers a
+        // proposal that was previously assigned to a solo reviewer)
+        await this.ensureAIReview(proposalId);
+      }
 
       // Send notification to new reviewer
       try {
@@ -503,6 +491,36 @@ class ReassignReviewController {
     }
   );
 
+  // Make sure an AI review exists for this proposal.
+  // If exists but has zero total score, regenerate it.
+  private async ensureAIReview(proposalId: string): Promise<void> {
+    const existingAIReview = await Review.findOne({
+      proposal: proposalId,
+      reviewType: ReviewType.AI,
+    });
+
+    if (!existingAIReview) {
+      logger.info(
+        `No existing AI review found for proposal ${proposalId}. Dispatching job to generate one.`
+      );
+      await agenda.now('generate AI review', { proposalId: proposalId });
+    } else if (existingAIReview.totalScore === 0) {
+      logger.info(
+        `Existing AI review found for proposal ${proposalId} but has zero score. Regenerating AI review.`
+      );
+
+      // Delete the existing AI review with zero score
+      await Review.findByIdAndDelete(existingAIReview._id);
+
+      // Generate a new AI review
+      await agenda.now('generate AI review', { proposalId: proposalId });
+    } else {
+      logger.info(
+        `Valid AI review already exists for proposal ${proposalId} with score ${existingAIReview.totalScore}`
+      );
+    }
+  }
+
   // Helper method to verify reviewer eligibility for regular reviews
   private async verifyReviewerEligibility(
     reviewerId: string,
@@ -514,7 +532,7 @@ class ReassignReviewController {
     );
 
     // Bypass faculty cluster checks for special user
-    if (reviewerId === this.BYPASS_USER_ID) {
+    if (isBypassReviewer(reviewerId)) {
       logger.info(
         `Bypass user ${reviewerId} detected - checking basic eligibility only`
       );
@@ -607,7 +625,7 @@ class ReassignReviewController {
     );
 
     // Bypass faculty cluster checks for special user
-    if (reviewerId === this.BYPASS_USER_ID) {
+    if (isBypassReviewer(reviewerId)) {
       logger.info(
         `Bypass user ${reviewerId} detected - checking basic eligibility only`
       );
@@ -1162,26 +1180,28 @@ class ReassignReviewController {
         proposal: proposalId,
       }).distinct('reviewer');
 
-      // Check if bypass user exists and is not already assigned
-      const bypassUser = await User.findById(this.BYPASS_USER_ID);
-      const bypassUserAlreadyAssigned = existingReviewerIds
-        .filter((id) => id !== null)
-        .map((id) => id.toString())
-        .includes(this.BYPASS_USER_ID);
+      // Bypass (solo) reviewers that are eligible and not already assigned.
+      // They are listed first and flagged so the UI can label them.
+      const alreadyAssignedIds = new Set(
+        existingReviewerIds.filter((id) => id !== null).map((id) => id.toString())
+      );
+      const bypassReviewerIds = getBypassReviewerIds();
 
-      let bypassUserEligible = null;
+      const bypassUsers = await User.find({
+        _id: { $in: bypassReviewerIds },
+        role: UserRole.REVIEWER,
+        isActive: true,
+        invitationStatus: { $in: ['accepted', 'added'] },
+      });
 
-      if (
-        bypassUser &&
-        !bypassUserAlreadyAssigned &&
-        bypassUser.role === UserRole.REVIEWER &&
-        bypassUser.isActive &&
-        ['accepted', 'added'].includes(bypassUser.invitationStatus)
-      ) {
+      const bypassUsersEligible = [];
+
+      for (const bypassUser of bypassUsers as any[]) {
+        const bypassId = bypassUser._id.toString();
+        if (alreadyAssignedIds.has(bypassId)) continue;
+
         // Get bypass user's review statistics
-        const bypassUserReviews = await Review.find({
-          reviewer: this.BYPASS_USER_ID,
-        });
+        const bypassUserReviews = await Review.find({ reviewer: bypassId });
         const totalReviewsCount = bypassUserReviews.length;
         const pendingReviewsCount = bypassUserReviews.filter(
           (r) => r.status !== ReviewStatus.COMPLETED
@@ -1194,7 +1214,7 @@ class ReassignReviewController {
         ).length;
 
         // faculty/department are title strings on the user (Option A).
-        bypassUserEligible = {
+        bypassUsersEligible.push({
           _id: bypassUser._id,
           name: bypassUser.name,
           email: bypassUser.email,
@@ -1211,11 +1231,9 @@ class ReassignReviewController {
           completionRate:
             totalReviewsCount > 0 ? Math.round((completedReviewsCount / totalReviewsCount) * 100) : 0,
           isSpecialReviewer: true, // Flag to identify this user in frontend
-        };
+        });
 
-        logger.info(
-          `Bypass user ${this.BYPASS_USER_ID} added to eligible reviewers list`
-        );
+        logger.info(`Bypass user ${bypassId} added to eligible reviewers list`);
       }
 
       const submitterFaculty = (proposal.submitter as any).faculty;
@@ -1272,9 +1290,10 @@ class ReassignReviewController {
             isActive: true,
             invitationStatus: { $in: ['accepted', 'added'] },
             _id: {
-              $nin: existingReviewerIds
-                .filter((id) => id !== null)
-                .map((id) => new mongoose.Types.ObjectId(id)),
+              $nin: [
+                ...existingReviewerIds.filter((id) => id !== null),
+                ...bypassReviewerIds,
+              ].map((id) => new mongoose.Types.ObjectId(id)),
             },
           },
         },
@@ -1377,12 +1396,12 @@ class ReassignReviewController {
         },
       ]);
 
-      if (bypassUserEligible) {
-        eligibleReviewers.unshift(bypassUserEligible); // Add to beginning of list
+      if (bypassUsersEligible.length > 0) {
+        eligibleReviewers.unshift(...bypassUsersEligible); // Add to beginning of list
       }
 
       logger.info(
-        `Retrieved ${eligibleReviewers.length} eligible reviewers for proposal ${proposalId}${bypassUserEligible ? ' (including bypass user)' : ''}`
+        `Retrieved ${eligibleReviewers.length} eligible reviewers for proposal ${proposalId}${bypassUsersEligible.length > 0 ? ' (including bypass users)' : ''}`
       );
 
       res.status(200).json({

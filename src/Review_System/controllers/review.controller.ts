@@ -1,6 +1,13 @@
+/* eslint-disable max-lines */
 import { Request, Response } from 'express';
-import Review, { ReviewStatus, ReviewType } from '../models/review.model';
-import Proposal from '../../Proposal_Submission/models/proposal.model';
+import Review, {
+  ReviewStatus,
+  ReviewType,
+  IReview,
+} from '../models/review.model';
+import Proposal, {
+  ProposalStatus,
+} from '../../Proposal_Submission/models/proposal.model';
 import Award, { AwardStatus } from '../models/award.model';
 import { NotFoundError } from '../../utils/customErrors';
 import asyncHandler from '../../utils/asyncHandler';
@@ -237,6 +244,27 @@ class ReviewController {
 
       await review.save();
 
+      // Solo (bypass) reviewer: this one review is final. No AI review, no
+      // discrepancy check - straight to the first decision page.
+      if (review.isSoloReview && review.reviewType === ReviewType.HUMAN) {
+        const finalScore = await this.finalizeSoloReview(review);
+
+        res.status(200).json({
+          success: true,
+          message: 'Review submitted successfully',
+          data: {
+            review,
+            soloReview: true,
+            finalScore,
+            discrepancyAnalysis: {
+              criteriaDiscrepancies: [],
+              overallDiscrepancy: {},
+            },
+          },
+        });
+        return;
+      }
+
       // Get all reviews for this proposal (excluding reconciliation reviews for initial check)
       const allReviews = await Review.find({
         proposal: review.proposal,
@@ -344,6 +372,50 @@ class ReviewController {
       });
     }
   );
+
+  // Finalise a proposal reviewed by a solo (bypass) reviewer.
+  // Returns the final score (= the solo reviewer's total score).
+  private finalizeSoloReview = async (review: IReview): Promise<number> => {
+    const proposal = await Proposal.findById(review.proposal);
+    if (!proposal) {
+      throw new NotFoundError('Proposal not found');
+    }
+
+    const finalScore = review.totalScore;
+
+    // 'reviewed' is what the first decision page filters on
+    proposal.reviewStatus = 'reviewed';
+    proposal.status = ProposalStatus.UNDER_REVIEW;
+    await proposal.save();
+
+    // Award.proposal is unique, so update if one already exists
+    const award = await Award.findOne({ proposal: proposal._id });
+
+    if (award) {
+      if (award.status === AwardStatus.PENDING) {
+        award.finalScore = finalScore;
+        award.feedbackComments =
+          'Your proposal has been reviewed. Final decision pending.';
+        await award.save();
+      }
+    } else {
+      await new Award({
+        proposal: proposal._id,
+        submitter: proposal.submitter,
+        finalScore,
+        status: AwardStatus.PENDING,
+        fundingAmount: proposal.estimatedBudget || 0,
+        feedbackComments:
+          'Your proposal has been reviewed. Final decision pending.',
+      }).save();
+    }
+
+    logger.info(
+      `Solo review ${review._id} finalised proposal ${proposal._id} with score ${finalScore}`
+    );
+
+    return finalScore;
+  };
 
   // Helper method to generate discrepancy analysis for a proposal
   generateDiscrepancyAnalysis = async (

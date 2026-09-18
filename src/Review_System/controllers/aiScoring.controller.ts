@@ -29,6 +29,24 @@ export const generateAIReviewForProposal = async (
       throw new NotFoundError('Proposal not found');
     }
 
+    // Solo (bypass) reviewer proposals never get an AI review. This also
+    // covers jobs that were queued/retried before the solo assignment.
+    const soloReviewExists = await Review.exists({
+      proposal: proposalId,
+      reviewType: ReviewType.HUMAN,
+      isSoloReview: true,
+    });
+
+    if (soloReviewExists) {
+      logger.info(
+        `Skipping AI review for proposal ${proposalId}: assigned to a solo reviewer`
+      );
+      return {
+        success: true,
+        message: 'AI review skipped: proposal is under a solo reviewer',
+      };
+    }
+
     // Check if AI review already exists
     const existingAIReview = await Review.findOne({
       proposal: proposalId,
