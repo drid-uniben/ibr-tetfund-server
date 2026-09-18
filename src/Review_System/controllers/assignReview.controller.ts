@@ -12,9 +12,13 @@ import Review, {
 import asyncHandler from '../../utils/asyncHandler';
 import logger from '../../utils/logger';
 import emailService from '../../services/email.service';
-import { NotFoundError } from '../../utils/customErrors';
+import { NotFoundError, BadRequestError } from '../../utils/customErrors';
 import agenda from '../../config/agenda'; // Import the agenda instance
 import { Types } from 'mongoose';
+import {
+  getBypassReviewerIds,
+  isBypassReviewer,
+} from '../../config/bypassReviewers';
 
 interface IAssignReviewResponse {
   success: boolean;
@@ -306,6 +310,10 @@ class AssignReviewController {
             role: UserRole.REVIEWER,
             isActive: true,
             invitationStatus: { $in: ['accepted', 'added'] },
+            // bypass (solo) reviewers are only ever picked manually by an admin
+            _id: {
+              $nin: getBypassReviewerIds().map((id) => new Types.ObjectId(id)),
+            },
           },
         },
         {
@@ -494,6 +502,93 @@ class AssignReviewController {
             totalReviews: selectedReviewer.totalReviewsCount,
           },
           dueDate,
+        },
+      });
+    }
+  );
+
+  // Assign a proposal directly to a bypass (solo) reviewer.
+  // Solo flow: the only review, no AI review, no discrepancy check. Their
+  // submitted review moves the proposal straight to the first decision page.
+  assignSoloReviewer = asyncHandler(
+    async (
+      req: Request<{ proposalId: string }, unknown, { reviewerId?: string }>,
+      res: Response<IAssignReviewResponse>
+    ): Promise<void> => {
+      const { proposalId } = req.params;
+      const { reviewerId } = req.body;
+
+      if (!reviewerId || !isBypassReviewer(reviewerId)) {
+        throw new BadRequestError('reviewerId must be a configured solo reviewer');
+      }
+
+      const proposal = await Proposal.findById(proposalId);
+      if (!proposal) {
+        throw new NotFoundError('Proposal not found');
+      }
+
+      const existingReview = await Review.exists({ proposal: proposalId });
+      if (existingReview) {
+        throw new BadRequestError(
+          'This proposal already has reviews. Use "Reassign Review" instead.'
+        );
+      }
+
+      const reviewer = await User.findById(reviewerId);
+      if (
+        !reviewer ||
+        reviewer.role !== UserRole.REVIEWER ||
+        !reviewer.isActive ||
+        !['accepted', 'added'].includes(reviewer.invitationStatus)
+      ) {
+        throw new BadRequestError('Solo reviewer is not active or not eligible');
+      }
+
+      const dueDate = calculateDueDate(5);
+
+      const review = new Review({
+        proposal: proposalId,
+        reviewer: reviewer._id,
+        reviewType: ReviewType.HUMAN,
+        status: ReviewStatus.IN_PROGRESS,
+        isSoloReview: true,
+        dueDate,
+      });
+      await review.save();
+
+      proposal.status = 'under_review';
+      proposal.reviewStatus = 'pending';
+      await proposal.save();
+
+      logger.info(
+        `Assigned proposal ${proposalId} to solo reviewer ${reviewer._id} (AI review skipped)`
+      );
+
+      try {
+        await emailService.sendReviewAssignmentEmail(
+          reviewer.email,
+          proposal.projectTitle || 'Research Proposal',
+          reviewer.name,
+          dueDate
+        );
+      } catch (error) {
+        logger.error(
+          'Failed to send solo reviewer notification email:',
+          error instanceof Error ? error.message : 'Unknown error'
+        );
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Proposal assigned to solo reviewer successfully',
+        data: {
+          reviewer: {
+            id: reviewer._id,
+            name: reviewer.name,
+            email: reviewer.email,
+          },
+          dueDate,
+          isSoloReview: true,
         },
       });
     }

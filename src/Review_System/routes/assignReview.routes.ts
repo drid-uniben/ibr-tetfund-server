@@ -23,6 +23,21 @@ router.post(
   assignReviewController.assignReviewers
 );
 
+// Route to assign a proposal directly to a bypass (solo) reviewer
+const soloAssignSchema = z.object({
+  params: proposalIdSchema.shape.params,
+  body: z.object({
+    reviewerId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid reviewer ID format'),
+  }),
+});
+
+router.post(
+  '/assign/:proposalId/solo',
+  authenticateAdminToken,
+  validateRequest(soloAssignSchema),
+  assignReviewController.assignSoloReviewer
+);
+
 // Route to check for overdue reviews (no params needed)
 router.get(
   '/check-overdue',

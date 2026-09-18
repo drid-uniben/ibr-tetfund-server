@@ -37,6 +37,9 @@ export interface IReview extends Document {
   comments: string;
   totalScore: number;
   status: ReviewStatus;
+  // true when this is the only review for the proposal (bypass/solo reviewer):
+  // no AI review, no discrepancy check, submitting it finalises the proposal
+  isSoloReview: boolean;
   dueDate: Date;
   completedAt?: Date;
   createdAt: Date;
@@ -134,6 +137,10 @@ const ReviewSchema: Schema<IReview> = new Schema(
       type: String,
       enum: Object.values(ReviewStatus),
       default: ReviewStatus.IN_PROGRESS,
+    },
+    isSoloReview: {
+      type: Boolean,
+      default: false,
     },
     dueDate: {
       type: Date,
