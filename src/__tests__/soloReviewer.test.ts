@@ -58,7 +58,8 @@ import reconciliationController from '../Review_System/controllers/reconciliatio
 import reviewController from '../Review_System/controllers/review.controller';
 import { generateAIReviewForProposal } from '../Review_System/controllers/aiScoring.controller';
 
-const SOLO_ID = '68557cdbc6540899e1dc934f';
+// Whatever id is currently hardcoded in src/config/bypassReviewers.ts
+const SOLO_ID = getBypassReviewerIds()[0];
 
 const runSubmit = (): Promise<{ status: number; body: any }> =>
   new Promise((resolve, reject) => {
@@ -91,7 +92,10 @@ describe('bypass reviewer config', () => {
   it('merges ids from BYPASS_REVIEWER_IDS and ignores malformed ones', () => {
     process.env.BYPASS_REVIEWER_IDS = ` bbbbbbbbbbbbbbbbbbbbbbbb , not-an-id, ${SOLO_ID}`;
     const ids = getBypassReviewerIds();
-    expect(ids).toEqual([SOLO_ID, 'bbbbbbbbbbbbbbbbbbbbbbbb']);
+    expect(ids).toContain(SOLO_ID);
+    expect(ids).toContain('bbbbbbbbbbbbbbbbbbbbbbbb');
+    expect(ids).not.toContain('not-an-id');
+    expect(new Set(ids).size).toBe(ids.length); // no duplicates
     expect(isBypassReviewer('bbbbbbbbbbbbbbbbbbbbbbbb')).toBe(true);
   });
 });

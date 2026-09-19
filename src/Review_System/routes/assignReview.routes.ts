@@ -31,6 +31,14 @@ const soloAssignSchema = z.object({
   }),
 });
 
+// Route to list the bypass (solo) reviewers available for a proposal
+router.get(
+  '/assign/:proposalId/solo-reviewers',
+  authenticateAdminToken,
+  validateRequest(proposalIdSchema),
+  assignReviewController.getSoloReviewers
+);
+
 router.post(
   '/assign/:proposalId/solo',
   authenticateAdminToken,
