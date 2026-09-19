@@ -413,16 +413,14 @@ class ProposalReviewsController {
         if (hasDiscrepancy) {
           // Calculate criterion-level discrepancies
           const criteriaNames = [
-            'relevanceToNationalPriorities',
-            'originalityAndInnovation',
-            'clarityOfResearchProblem',
+            'backgroundAndProblemStatement',
+            'researchObjectives',
             'methodology',
-            'literatureReview',
-            'teamComposition',
-            'feasibilityAndTimeline',
-            'budgetJustification',
-            'expectedOutcomes',
-            'sustainabilityAndScalability',
+            'expectedOutcomesAndImpact',
+            'workPlanAndFeasibility',
+            'estimatedBudget',
+            'capacityOfLeadResearcherAndTeam',
+            'relevanceAndOriginality',
           ];
 
           const criteriaDiscrepancies = criteriaNames

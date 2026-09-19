@@ -17,16 +17,14 @@ export const ReviewStatus = {
 export type ReviewStatus = (typeof ReviewStatus)[keyof typeof ReviewStatus];
 
 export interface IScore {
-  relevanceToNationalPriorities: number;
-  originalityAndInnovation: number;
-  clarityOfResearchProblem: number;
+  backgroundAndProblemStatement: number;
+  researchObjectives: number;
   methodology: number;
-  literatureReview: number;
-  teamComposition: number;
-  feasibilityAndTimeline: number;
-  budgetJustification: number;
-  expectedOutcomes: number;
-  sustainabilityAndScalability: number;
+  expectedOutcomesAndImpact: number;
+  workPlanAndFeasibility: number;
+  estimatedBudget: number;
+  capacityOfLeadResearcherAndTeam: number;
+  relevanceAndOriginality: number;
 }
 
 export interface IReview extends Document {
@@ -64,19 +62,13 @@ const ReviewSchema: Schema<IReview> = new Schema(
       required: [true, 'Review type is required'],
     },
     scores: {
-      relevanceToNationalPriorities: {
-        type: Number,
-        min: 0,
-        max: 10,
-        default: 0,
-      },
-      originalityAndInnovation: {
+      backgroundAndProblemStatement: {
         type: Number,
         min: 0,
         max: 15,
         default: 0,
       },
-      clarityOfResearchProblem: {
+      researchObjectives: {
         type: Number,
         min: 0,
         max: 10,
@@ -85,43 +77,37 @@ const ReviewSchema: Schema<IReview> = new Schema(
       methodology: {
         type: Number,
         min: 0,
+        max: 20,
+        default: 0,
+      },
+      expectedOutcomesAndImpact: {
+        type: Number,
+        min: 0,
         max: 15,
         default: 0,
       },
-      literatureReview: {
+      workPlanAndFeasibility: {
         type: Number,
         min: 0,
         max: 10,
         default: 0,
       },
-      teamComposition: {
+      estimatedBudget: {
         type: Number,
         min: 0,
         max: 10,
         default: 0,
       },
-      feasibilityAndTimeline: {
+      capacityOfLeadResearcherAndTeam: {
         type: Number,
         min: 0,
         max: 10,
         default: 0,
       },
-      budgetJustification: {
+      relevanceAndOriginality: {
         type: Number,
         min: 0,
         max: 10,
-        default: 0,
-      },
-      expectedOutcomes: {
-        type: Number,
-        min: 0,
-        max: 5,
-        default: 0,
-      },
-      sustainabilityAndScalability: {
-        type: Number,
-        min: 0,
-        max: 5,
         default: 0,
       },
     },
@@ -162,16 +148,14 @@ ReviewSchema.pre<IReview>('save', function (next) {
   const scores = this.scores;
   if (scores) {
     this.totalScore =
-      (scores.relevanceToNationalPriorities || 0) +
-      (scores.originalityAndInnovation || 0) +
-      (scores.clarityOfResearchProblem || 0) +
+      (scores.backgroundAndProblemStatement || 0) +
+      (scores.researchObjectives || 0) +
       (scores.methodology || 0) +
-      (scores.literatureReview || 0) +
-      (scores.teamComposition || 0) +
-      (scores.feasibilityAndTimeline || 0) +
-      (scores.budgetJustification || 0) +
-      (scores.expectedOutcomes || 0) +
-      (scores.sustainabilityAndScalability || 0);
+      (scores.expectedOutcomesAndImpact || 0) +
+      (scores.workPlanAndFeasibility || 0) +
+      (scores.estimatedBudget || 0) +
+      (scores.capacityOfLeadResearcherAndTeam || 0) +
+      (scores.relevanceAndOriginality || 0);
   }
   next();
 });

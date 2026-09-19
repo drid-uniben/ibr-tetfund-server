@@ -178,16 +178,14 @@ class ReviewController {
   // Helper method to format criteria names for better readability
   private formatCriteriaName(criteriaKey: string): string {
     const criteriaLabels: { [key: string]: string } = {
-      relevanceToNationalPriorities: 'Relevance to National Priorities',
-      originalityAndInnovation: 'Originality and Innovation',
-      clarityOfResearchProblem: 'Clarity of Research Problem',
+      backgroundAndProblemStatement: 'Background and Problem Statement',
+      researchObjectives: 'Research Objectives',
       methodology: 'Methodology',
-      literatureReview: 'Literature Review',
-      teamComposition: 'Team Composition',
-      feasibilityAndTimeline: 'Feasibility and Timeline',
-      budgetJustification: 'Budget Justification',
-      expectedOutcomes: 'Expected Outcomes',
-      sustainabilityAndScalability: 'Sustainability and Scalability',
+      expectedOutcomesAndImpact: 'Expected Outcomes and Impact',
+      workPlanAndFeasibility: 'Work Plan and Feasibility',
+      estimatedBudget: 'Estimated Budget',
+      capacityOfLeadResearcherAndTeam: 'Capacity of Lead Researcher and Team',
+      relevanceAndOriginality: 'Relevance and Originality',
     };
 
     return criteriaLabels[criteriaKey] || criteriaKey;
