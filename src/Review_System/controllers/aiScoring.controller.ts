@@ -191,18 +191,39 @@ ${proposal.estimatedBudget || ''}
     throw new Error(`Unknown submitter type: ${proposal.submitterType}`);
   }
 
-  // Map AI scores to the review model's IScore interface
+  // TODO: 'uniben-ai-proposal-review-cli' still evaluates against the OLD
+  // 10-criteria rubric and has no concept of the new 8-criteria one (it lives
+  // in a separate repo: unibeninterns/proposal-cli). Until that package is
+  // updated to score the new rubric directly, this is a best-effort bridge:
+  // - methodology, feasibility, budget, team map straight across (same concept)
+  // - clarity -> backgroundAndProblemStatement (closest available signal)
+  // - outcomes -> expectedOutcomesAndImpact
+  // - relevance + originality are averaged into relevanceAndOriginality
+  // - literatureReview and sustainability have no home in the new rubric and are dropped
+  // - researchObjectives has NO corresponding signal from the package at all;
+  //   it reuses the clarity score as a proxy. This is a real gap, not a
+  //   judgment call - flag AI-generated reviews for human spot-checking on
+  //   this criterion until the package is updated.
+  const scale = (raw: number, oldMax: number, newMax: number): number =>
+    Math.round((raw / oldMax) * newMax);
+
   const mappedScores: IScore = {
-    relevanceToNationalPriorities: evaluationResult.scores.relevance,
-    originalityAndInnovation: evaluationResult.scores.originality,
-    clarityOfResearchProblem: evaluationResult.scores.clarity,
-    methodology: evaluationResult.scores.methodology,
-    literatureReview: evaluationResult.scores.literature,
-    teamComposition: evaluationResult.scores.team,
-    feasibilityAndTimeline: evaluationResult.scores.feasibility,
-    budgetJustification: evaluationResult.scores.budget,
-    expectedOutcomes: evaluationResult.scores.outcomes,
-    sustainabilityAndScalability: evaluationResult.scores.sustainability,
+    backgroundAndProblemStatement: scale(
+      evaluationResult.scores.clarity,
+      10,
+      15
+    ),
+    researchObjectives: scale(evaluationResult.scores.clarity, 10, 10), // proxy, see TODO above
+    methodology: scale(evaluationResult.scores.methodology, 15, 20),
+    expectedOutcomesAndImpact: scale(evaluationResult.scores.outcomes, 5, 15),
+    workPlanAndFeasibility: evaluationResult.scores.feasibility,
+    estimatedBudget: evaluationResult.scores.budget,
+    capacityOfLeadResearcherAndTeam: evaluationResult.scores.team,
+    relevanceAndOriginality: scale(
+      evaluationResult.scores.relevance + evaluationResult.scores.originality,
+      25,
+      10
+    ),
   };
 
   // Update review with mapped AI scores and comment
