@@ -19,6 +19,7 @@ import {
   getBypassReviewerIds,
   isBypassReviewer,
 } from '../../config/bypassReviewers';
+import { findBypassReviewersForProposal } from '../../services/bypassReviewer.service';
 
 interface IAssignReviewResponse {
   success: boolean;
@@ -503,6 +504,30 @@ class AssignReviewController {
           },
           dueDate,
         },
+      });
+    }
+  );
+
+  // List the bypass (solo) reviewers that can take this proposal, plus a
+  // reason for each configured one that can't. Independent of faculty/cluster.
+  getSoloReviewers = asyncHandler(
+    async (
+      req: Request<{ proposalId: string }>,
+      res: Response<IAssignReviewResponse>
+    ): Promise<void> => {
+      const { proposalId } = req.params;
+
+      const proposal = await Proposal.exists({ _id: proposalId });
+      if (!proposal) {
+        throw new NotFoundError('Proposal not found');
+      }
+
+      const { eligible, unavailable } =
+        await findBypassReviewersForProposal(proposalId);
+
+      res.status(200).json({
+        success: true,
+        data: { reviewers: eligible, unavailable },
       });
     }
   );

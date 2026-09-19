@@ -15,6 +15,7 @@ import {
   getBypassReviewerIds,
   isBypassReviewer,
 } from '../../config/bypassReviewers';
+import { findBypassReviewersForProposal } from '../../services/bypassReviewer.service';
 
 interface IReassignReviewResponse {
   success: boolean;
@@ -1181,68 +1182,19 @@ class ReassignReviewController {
       }).distinct('reviewer');
 
       // Bypass (solo) reviewers that are eligible and not already assigned.
-      // They are listed first and flagged so the UI can label them.
-      const alreadyAssignedIds = new Set(
-        existingReviewerIds.filter((id) => id !== null).map((id) => id.toString())
-      );
+      // They are listed first and flagged so the UI can label them. This does
+      // not depend on the proposal's faculty, so it works for every proposal.
+      const { eligible: bypassUsersEligible } =
+        await findBypassReviewersForProposal(proposalId);
       const bypassReviewerIds = getBypassReviewerIds();
 
-      const bypassUsers = await User.find({
-        _id: { $in: bypassReviewerIds },
-        role: UserRole.REVIEWER,
-        isActive: true,
-        invitationStatus: { $in: ['accepted', 'added'] },
-      });
-
-      const bypassUsersEligible = [];
-
-      for (const bypassUser of bypassUsers as any[]) {
-        const bypassId = bypassUser._id.toString();
-        if (alreadyAssignedIds.has(bypassId)) continue;
-
-        // Get bypass user's review statistics
-        const bypassUserReviews = await Review.find({ reviewer: bypassId });
-        const totalReviewsCount = bypassUserReviews.length;
-        const pendingReviewsCount = bypassUserReviews.filter(
-          (r) => r.status !== ReviewStatus.COMPLETED
-        ).length;
-        const completedReviewsCount = bypassUserReviews.filter(
-          (r) => r.status === ReviewStatus.COMPLETED
-        ).length;
-        const discrepancyCount = bypassUserReviews.filter(
-          (r) => r.reviewType === ReviewType.RECONCILIATION
-        ).length;
-
-        // faculty/department are title strings on the user (Option A).
-        bypassUsersEligible.push({
-          _id: bypassUser._id,
-          name: bypassUser.name,
-          email: bypassUser.email,
-          academicTitle: bypassUser.academicTitle,
-          phoneNumber: bypassUser.phoneNumber,
-          facultyTitle: bypassUser.faculty || 'Unknown',
-          departmentTitle: bypassUser.department || 'Unknown',
-          totalReviewsCount,
-          pendingReviewsCount,
-          completedReviewsCount,
-          discrepancyCount,
-          lastLogin: bypassUser.lastLogin,
-          createdAt: bypassUser.createdAt,
-          completionRate:
-            totalReviewsCount > 0 ? Math.round((completedReviewsCount / totalReviewsCount) * 100) : 0,
-          isSpecialReviewer: true, // Flag to identify this user in frontend
-        });
-
-        logger.info(`Bypass user ${bypassId} added to eligible reviewers list`);
-      }
-
       const submitterFaculty = (proposal.submitter as any).faculty;
-      if (!submitterFaculty) {
-        throw new BadRequestError('Proposal submitter has no faculty assigned');
+      let rawFacultyTitle = '';
+      if (typeof submitterFaculty === 'string') {
+        rawFacultyTitle = submitterFaculty;
+      } else if (submitterFaculty) {
+        rawFacultyTitle = (submitterFaculty as any).title ?? '';
       }
-
-      const rawFacultyTitle =
-        typeof submitterFaculty === 'string' ? submitterFaculty : (submitterFaculty as any).title;
 
       // Remove parenthetical codes and trim
       const cleanedFacultyTitle = rawFacultyTitle.split('(')[0].trim();
@@ -1258,7 +1210,26 @@ class ReassignReviewController {
       }
 
       if (!canonicalFacultyTitle) {
-        throw new BadRequestError('No cluster found for the proposal faculty');
+        // No review cluster for this faculty (e.g. Faculty of Computing) or the
+        // submitter has no faculty. Cluster reviewers can't be offered, but
+        // bypass reviewers are not cluster-bound, so still return those.
+        logger.warn(
+          `No cluster for proposal ${proposalId} faculty "${rawFacultyTitle || 'none'}"; returning bypass reviewers only`
+        );
+
+        res.status(200).json({
+          success: true,
+          data: {
+            eligibleReviewers: bypassUsersEligible,
+            proposalInfo: {
+              id: proposalId,
+              title: proposal.projectTitle || 'Research Proposal',
+              submitterFaculty: rawFacultyTitle || 'Unknown',
+              cluster: [],
+            },
+          },
+        });
+        return;
       }
 
       const eligibleFaculties = this.clusterMap[canonicalFacultyTitle] || [];
