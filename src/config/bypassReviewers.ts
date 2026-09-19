@@ -16,7 +16,7 @@
  * extra ids via the BYPASS_REVIEWER_IDS env var (comma-separated).
  */
 const HARDCODED_BYPASS_REVIEWER_IDS: readonly string[] = [
-  '68557cdbc6540899e1dc934f',
+  '6aad151852aeaa4b64d0060f',
   // '<another reviewer _id>',
 ];
 
