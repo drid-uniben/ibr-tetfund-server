@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 jest.mock('../utils/logger', () => ({
   __esModule: true,
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
@@ -53,11 +52,16 @@ const soloUser = (over: any = {}) => ({
 });
 
 const mockReviews = (assignedToProposal: string[] = []) => {
-  (Review.find as jest.Mock).mockImplementation((query: any) =>
-    query.proposal
-      ? { distinct: jest.fn().mockResolvedValue(assignedToProposal.map((id) => ({ toString: () => id }))) }
-      : Promise.resolve([{ status: 'completed', reviewType: 'human' }])
-  );
+  (Review.find as jest.Mock).mockImplementation((query: any) => {
+    if (query.proposal) {
+      return {
+        distinct: jest
+          .fn()
+          .mockResolvedValue(assignedToProposal.map((id) => ({ toString: () => id }))),
+      };
+    }
+    return Promise.resolve([{ status: 'completed', reviewType: 'human' }]);
+  });
 };
 
 describe('findBypassReviewersForProposal', () => {
@@ -117,6 +121,8 @@ describe('findBypassReviewersForProposal', () => {
 });
 
 describe('getEligibleReviewers for a faculty with no cluster', () => {
+  // every real UNIBEN unit now has a cluster (see reviewClusters.test.ts); this
+  // covers a future unit that hasn't been added yet, and submitters with no faculty.
   const run = (faculty: unknown): Promise<any> =>
     new Promise((resolve, reject) => {
       const res: any = {
@@ -144,7 +150,7 @@ describe('getEligibleReviewers for a faculty with no cluster', () => {
   });
   afterEach(() => delete process.env.BYPASS_REVIEWER_IDS);
 
-  it.each([['Faculty of Computing'], ['Faculty of Nursing Sciences'], [undefined]])(
+  it.each([['Faculty of Underwater Basket Weaving'], [undefined]])(
     'still returns the solo reviewer for faculty = %s',
     async (faculty) => {
       const { status, body } = await run(faculty);

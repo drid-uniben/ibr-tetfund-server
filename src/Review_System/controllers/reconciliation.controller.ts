@@ -14,6 +14,7 @@ import { NotFoundError, BadRequestError } from '../../utils/customErrors';
 import logger from '../../utils/logger';
 import emailService from '../../services/email.service';
 import mongoose, { Document } from 'mongoose';
+import { clusterMap, keywordToFacultyMap } from '../../config/reviewClusters';
 
 interface IReviewerWithCounts extends IUser {
   _id: mongoose.Types.ObjectId; // Explicitly define _id type
@@ -23,148 +24,9 @@ interface IReviewerWithCounts extends IUser {
 }
 
 class ReconciliationController {
-  // Define the cluster map as a class property
-  private clusterMap = {
-    // Cluster 1
-    'Faculty of Agriculture': [
-      'Faculty of Life Sciences',
-      'Faculty of Veterinary Medicine',
-    ],
-    'Faculty of Life Sciences': [
-      'Faculty of Agriculture',
-      'Faculty of Veterinary Medicine',
-    ],
-    'Faculty of Veterinary Medicine': [
-      'Faculty of Agriculture',
-      'Faculty of Life Sciences',
-    ],
-
-    // Cluster 2
-    'Faculty of Pharmacy': [
-      'Faculty of Dentistry',
-      'Faculty of Medicine',
-      'Faculty of Basic Medical Sciences',
-      'School of Basic Clinical Sciences',
-      'Centre of Excellence in Reproductive Health Innovation',
-      'Institute of Child Health',
-    ],
-    'Faculty of Dentistry': [
-      'Faculty of Pharmacy',
-      'Faculty of Medicine',
-      'Faculty of Basic Medical Sciences',
-      'School of Basic Clinical Sciences',
-      'Centre of Excellence in Reproductive Health Innovation',
-      'Institute of Child Health',
-    ],
-    'Faculty of Medicine': [
-      'Faculty of Pharmacy',
-      'Faculty of Dentistry',
-      'Faculty of Basic Medical Sciences',
-      'School of Basic Clinical Sciences',
-      'Centre of Excellence in Reproductive Health Innovation',
-      'Institute of Child Health',
-    ],
-    'Faculty of Basic Medical Sciences': [
-      'Faculty of Pharmacy',
-      'Faculty of Dentistry',
-      'Faculty of Medicine',
-      'School of Basic Clinical Sciences',
-      'Centre of Excellence in Reproductive Health Innovation',
-      'Institute of Child Health',
-    ],
-    'School of Basic Clinical Sciences': [
-      'Faculty of Pharmacy',
-      'Faculty of Dentistry',
-      'Faculty of Medicine',
-      'Faculty of Basic Medical Sciences',
-      'Centre of Excellence in Reproductive Health Innovation',
-      'Institute of Child Health',
-    ],
-    'Centre of Excellence in Reproductive Health Innovation': [
-      'Faculty of Pharmacy',
-      'Faculty of Dentistry',
-      'Faculty of Medicine',
-      'Faculty of Basic Medical Sciences',
-      'School of Basic Clinical Sciences',
-      'Institute of Child Health',
-    ],
-    'Institute of Child Health': [
-      'Faculty of Pharmacy',
-      'Faculty of Dentistry',
-      'Faculty of Medicine',
-      'Faculty of Basic Medical Sciences',
-      'School of Basic Clinical Sciences',
-      'Centre of Excellence in Reproductive Health Innovation',
-    ],
-
-    // Cluster 3
-    'Faculty of Management Sciences': [
-      'Institute of Education',
-      'Faculty of Social Sciences',
-      'Faculty of Vocational Education',
-    ],
-    'Institute of Education': [
-      'Faculty of Management Sciences',
-      'Faculty of Social Sciences',
-      'Faculty of Vocational Education',
-    ],
-    'Faculty of Social Sciences': [
-      'Faculty of Management Sciences',
-      'Institute of Education',
-      'Faculty of Vocational Education',
-    ],
-    'Faculty of Vocational Education': [
-      'Faculty of Management Sciences',
-      'Institute of Education',
-      'Faculty of Social Sciences',
-    ],
-
-    // Cluster 4
-    'Faculty of Law': ['Faculty of Arts', 'Faculty of Education'],
-    'Faculty of Arts': ['Faculty of Law', 'Faculty of Education'],
-    'Faculty of Education': ['Faculty of Law', 'Faculty of Arts'],
-
-    // Cluster 5
-    'Faculty of Engineering': [
-      'Faculty of Physical Sciences',
-      'Faculty of Environmental Sciences',
-    ],
-    'Faculty of Physical Sciences': [
-      'Faculty of Engineering',
-      'Faculty of Environmental Sciences',
-    ],
-    'Faculty of Environmental Sciences': [
-      'Faculty of Engineering',
-      'Faculty of Physical Sciences',
-    ],
-  };
-
-  // Define a map from keywords to canonical FacultyTitle
-  private keywordToFacultyMap: {
-    [key: string]: keyof typeof ReconciliationController.prototype.clusterMap;
-  } = {
-      Agriculture: 'Faculty of Agriculture',
-      'Life Sciences': 'Faculty of Life Sciences',
-      'Veterinary Medicine': 'Faculty of Veterinary Medicine',
-      Pharmacy: 'Faculty of Pharmacy',
-      Dentistry: 'Faculty of Dentistry',
-      Medicine: 'Faculty of Medicine',
-      'Basic Medical Sciences': 'Faculty of Basic Medical Sciences',
-      'Basic Clinical Sciences': 'School of Basic Clinical Sciences',
-      'Reproductive Health Innovation':
-      'Centre of Excellence in Reproductive Health Innovation',
-      'Child Health': 'Institute of Child Health',
-      'Management Sciences': 'Faculty of Management Sciences',
-      Education: 'Faculty of Education',
-      'Social Sciences': 'Faculty of Social Sciences',
-      'Vocational Education': 'Faculty of Vocational Education',
-      Law: 'Faculty of Law',
-      Arts: 'Faculty of Arts',
-      'Institute of Education': 'Institute of Education',
-      Engineering: 'Faculty of Engineering',
-      'Physical Sciences': 'Faculty of Physical Sciences',
-      'Environmental Sciences': 'Faculty of Environmental Sciences',
-    };
+  // Review clusters live in one place: src/config/reviewClusters.ts
+  private clusterMap = clusterMap;
+  private keywordToFacultyMap = keywordToFacultyMap;
 
   // Helper function to select a reviewer based on least workload, then randomization
   private selectReviewerByWorkload = (
