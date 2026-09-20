@@ -5,10 +5,19 @@ export const fullProposalStatusUpdateTemplate = (
   name: string,
   projectTitle: string,
   status: ProposalStatus,
-  feedbackComments?: string
+  feedbackComments?: string,
+  finalSubmissionDeadline?: Date | null
 ): string => {
   let subjectLine = '';
   let bodyContent = '';
+
+  const formattedDeadline = finalSubmissionDeadline
+    ? new Date(finalSubmissionDeadline).toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    : null;
 
   if (status === ProposalStatus.APPROVED) {
     subjectLine =
@@ -19,7 +28,11 @@ export const fullProposalStatusUpdateTemplate = (
         <p>Your concept note has been shortlisted for the TETFund Institutional-Based Research (IBR) Grant.</p>
     `;
     bodyContent += `
-        <p>You will recieve further information by the directorate soon, firstly login into your dashboard and click on view deatils for the approved proposal to view the next steps instructions.</p>
+        <p>You will receive further information from the directorate soon${
+          formattedDeadline
+            ? `, including final submission requirements due on or before <strong>${formattedDeadline}</strong>`
+            : ''
+        }. Login into your dashboard and click on view details for the approved proposal to view the next steps.</p>
     `;
   } else if (status === ProposalStatus.REJECTED) {
     subjectLine = 'Update on Your Full Proposal Submission: Decision Made';
@@ -38,12 +51,14 @@ export const fullProposalStatusUpdateTemplate = (
     bodyContent += `
         <p>We appreciate the time and effort you put into your proposal.</p>
         <p>While it wasn't shortlisted this time, we encourage you to consider the feedback and apply again in the future.</p>
+        <p>You can log into your dashboard at any time using your credentials to review this feedback again.</p>
       `;
   } else {
     subjectLine = 'Update on your Proposal Submission';
     bodyContent = `
         <p>Dear ${name},</p>
         <p>This is an update regarding your proposal "<strong>${projectTitle}</strong>". Its current status is: <strong>${status}</strong>.</p>
+        <p>Login into your dashboard using your credentials for more details.</p>
     `;
   }
 

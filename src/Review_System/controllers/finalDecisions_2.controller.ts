@@ -9,6 +9,7 @@ import asyncHandler from '../../utils/asyncHandler';
 import logger from '../../utils/logger';
 import { IUser } from '../../model/user.model';
 import emailService from '../../services/email.service';
+import { resolveWindow } from '../../model/submissionWindow.model';
 
 // Define a generic response interface for admin controller
 interface IAdminResponse {
@@ -745,13 +746,18 @@ class FullProposalDecisionsController {
         );
       }
 
+      // Dynamic final-submission deadline for the email, sourced from the
+      // admin-configurable submission window rather than a stored/stale date.
+      const finalSubmissionWindow = await resolveWindow('final_submission');
+
       // Send email notification about full proposal decision
       await emailService.sendFullProposalStatusUpdateEmail(
         submitterUser.email,
         submitterUser.name,
         proposalDetails.projectTitle,
         fullProposal.status,
-        fullProposal.reviewComments
+        fullProposal.reviewComments,
+        finalSubmissionWindow.closesAt
       );
 
       logger.info(
