@@ -6,10 +6,19 @@ export const proposalStatusUpdateTemplate = (
   projectTitle: string,
   status: ProposalStatus,
   fundingAmount?: number,
-  feedbackComments?: string
+  feedbackComments?: string,
+  fullProposalDeadline?: Date | null
 ): string => {
   let subjectLine = '';
   let bodyContent = '';
+
+  const formattedDeadline = fullProposalDeadline
+    ? new Date(fullProposalDeadline).toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    : null;
 
   if (status === ProposalStatus.APPROVED) {
     subjectLine =
@@ -22,9 +31,21 @@ export const proposalStatusUpdateTemplate = (
     if (fundingAmount) {
       bodyContent += `<p>You have the opportunity of being awarded a funding of NGN ${fundingAmount.toLocaleString()} after the next stage</p>`;
     }
+    if (feedbackComments) {
+      bodyContent += `
+        <div class="feedback">
+            <p><strong>Feedback from the review committee:</strong></p>
+            <p>${feedbackComments}</p>
+        </div>
+      `;
+    }
     bodyContent += `
-        <p>You are hereby invited to submit a full proposal on the portal on or before 31st July 2025.</p>
-        <p>Login into your researcher dashboard using the credentials sent previously to view the full proposal template and submit your full proposal.</p>
+        <p>You are hereby invited to submit a full proposal on the portal${
+          formattedDeadline
+            ? ` on or before <strong>${formattedDeadline}</strong>`
+            : ''
+        }.</p>
+        <p>Login into your researcher dashboard using your credentials to view the full proposal template, review your feedback, and submit your full proposal.</p>
     `;
   } else if (status === ProposalStatus.REJECTED) {
     subjectLine = 'Update on Your Proposal Submission: Decision Made';
@@ -43,12 +64,14 @@ export const proposalStatusUpdateTemplate = (
     bodyContent += `
         <p>We appreciate the time and effort you put into your proposal.</p>
         <p>While it wasn't selected this time, we encourage you to consider the feedback and apply again in the future.</p>
+        <p>You can log into your researcher dashboard at any time using your credentials to review this feedback again.</p>
       `;
   } else {
     subjectLine = 'Update on your Proposal Submission';
     bodyContent = `
         <p>Dear ${name},</p>
         <p>This is an update regarding your proposal "<strong>${projectTitle}</strong>". Its current status is: <strong>${status}</strong>.</p>
+        <p>Login into your researcher dashboard using your credentials for more details.</p>
     `;
   }
 
