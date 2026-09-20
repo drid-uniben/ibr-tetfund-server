@@ -16,7 +16,7 @@
  * extra ids via the BYPASS_REVIEWER_IDS env var (comma-separated).
  */
 const HARDCODED_BYPASS_REVIEWER_IDS: readonly string[] = [
-  '6aad151852aeaa4b64d0060f',
+  '6aafdcfb4b8f6a339bc76b2a',
   // '<another reviewer _id>',
 ];
 
@@ -28,9 +28,9 @@ export const getBypassReviewerIds = (): string[] => {
     .map((id) => id.trim())
     .filter(Boolean);
 
-  return Array.from(new Set([...HARDCODED_BYPASS_REVIEWER_IDS, ...fromEnv])).filter(
-    (id) => OBJECT_ID_REGEX.test(id)
-  );
+  return Array.from(
+    new Set([...HARDCODED_BYPASS_REVIEWER_IDS, ...fromEnv])
+  ).filter((id) => OBJECT_ID_REGEX.test(id));
 };
 
 export const isBypassReviewer = (
