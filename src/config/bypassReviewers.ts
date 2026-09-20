@@ -17,6 +17,7 @@
  */
 const HARDCODED_BYPASS_REVIEWER_IDS: readonly string[] = [
   '6aafdcfb4b8f6a339bc76b2a',
+  '6aafe37de1aa786761dfb9c4',
   // '<another reviewer _id>',
 ];
 
