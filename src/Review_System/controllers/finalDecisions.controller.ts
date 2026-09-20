@@ -6,9 +6,11 @@ import Proposal, {
 import { NotFoundError, UnauthorizedError } from '../../utils/customErrors';
 import asyncHandler from '../../utils/asyncHandler';
 import logger from '../../utils/logger';
-import { IUser } from '../../model/user.model';
+import User, { IUser, UserRole } from '../../model/user.model';
 import emailService from '../../services/email.service';
 import Award, { AwardStatus } from '../../Review_System/models/award.model';
+import generateSecurePassword from '../../utils/passwordGenerator';
+import { resolveWindow } from '../../model/submissionWindow.model';
 
 // Define a generic response interface for admin controller
 interface IAdminResponse {
@@ -329,6 +331,40 @@ class DecisionsController {
               },
             },
             finalScore: '$awardDetails.finalScore',
+            // Solo (bypass) reviewer: their submitted comments prefill the
+            // admin's feedback field, since there's no AI/reconciliation
+            // comment to synthesize against - see review.model.ts isSoloReview.
+            soloReview: {
+              $let: {
+                vars: {
+                  solo: {
+                    $arrayElemAt: [
+                      {
+                        $filter: {
+                          input: '$reviews',
+                          as: 'review',
+                          cond: {
+                            $and: [
+                              { $eq: ['$$review.reviewType', 'human'] },
+                              { $eq: ['$$review.status', 'completed'] },
+                              { $eq: ['$$review.isSoloReview', true] },
+                            ],
+                          },
+                        },
+                      },
+                      0,
+                    ],
+                  },
+                },
+                in: '$$solo',
+              },
+            },
+          },
+        },
+        {
+          $addFields: {
+            isSoloReview: { $ne: ['$soloReview', null] },
+            soloReviewComments: '$soloReview.comments',
           },
         },
       ];
@@ -356,6 +392,8 @@ class DecisionsController {
           humanScore: 1,
           reconciliationScore: 1,
           finalScore: 1,
+          isSoloReview: 1,
+          soloReviewComments: 1,
           createdAt: 1,
           updatedAt: 1,
           lastNotifiedAt: 1,
@@ -558,13 +596,43 @@ class DecisionsController {
         );
       }
 
+      // First decision on this proposal: if this researcher has never
+      // received portal login credentials, send them now, alongside the
+      // decision email, so the "login to your dashboard" instruction in
+      // that email is actually actionable. Skipped for researchers who
+      // already have credentials (tracked per-user, not per-decision) -
+      // resending would silently invalidate their existing password.
+      const researcher = await User.findById(submitterUser._id);
+      if (researcher && !researcher.credentialsSent) {
+        const generatedPassword = generateSecurePassword();
+        researcher.password = generatedPassword;
+        researcher.role = UserRole.RESEARCHER;
+        researcher.isActive = true;
+        researcher.credentialsSent = true;
+        researcher.credentialsSentAt = new Date();
+        await researcher.save();
+        await emailService.sendCredentialsEmail(
+          researcher.email,
+          generatedPassword
+        );
+        logger.info(
+          `Admin ${user.id} auto-sent first-time credentials to researcher ${researcher._id} alongside the decision notification for proposal ${proposalId}`
+        );
+      }
+
+      // Dynamic full-proposal deadline for the email, sourced from the
+      // admin-configurable submission window (Deadlines page) rather than
+      // a hardcoded date.
+      const fullProposalWindow = await resolveWindow('full_proposal');
+
       await emailService.sendProposalStatusUpdateEmail(
         submitterUser.email,
         submitterUser.name,
         proposal.projectTitle as string, // Explicitly cast to string
         proposal.status,
         proposal.fundingAmount,
-        proposal.feedbackComments
+        proposal.feedbackComments,
+        fullProposalWindow.closesAt
       );
 
       logger.info(
