@@ -56,6 +56,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 app.use('/uploads', express.static(getStaticUploadsPath()));
+app.use('/templates', express.static(path.join(__dirname, 'public', 'templates')));
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use('/api/v2', routes);
