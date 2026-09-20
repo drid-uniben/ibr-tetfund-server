@@ -155,7 +155,8 @@ class EmailService {
     name: string,
     projectTitle: string,
     status: ProposalStatus,
-    feedbackComments?: string
+    feedbackComments?: string,
+    finalSubmissionDeadline?: Date | null
   ): Promise<void> {
     try {
       await this.transporter.sendMail({
@@ -166,7 +167,8 @@ class EmailService {
           name,
           projectTitle,
           status,
-          feedbackComments
+          feedbackComments,
+          finalSubmissionDeadline
         ),
       });
       logger.info(

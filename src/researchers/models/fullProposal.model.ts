@@ -17,12 +17,17 @@ export interface IFullProposal extends Document {
   status: FullProposalStatus;
   score?: number;
   submittedAt: Date;
-  deadline: Date; // July 31, 2025
+  // Snapshot of the admin-configured 'full_proposal' submission window at the
+  // time this document was created (see submissionWindow.model.ts). Null
+  // means no deadline was configured at that time - never a stale fallback date.
+  deadline: Date | null;
   reviewedAt?: Date;
   reviewComments?: string;
   finalSubmission?: string; // URL/path to uploaded document
   submitted: boolean;
-  finalSubmissionDeadline: Date; // August 15, 2025
+  // Snapshot of the 'final_submission' window, refreshed each time the final
+  // submission handler runs. Null means no deadline was configured.
+  finalSubmissionDeadline: Date | null;
   finalSubmittedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -61,7 +66,7 @@ const FullProposalSchema: Schema<IFullProposal> = new Schema(
     },
     deadline: {
       type: Date,
-      default: () => new Date('2025-07-31T23:59:59.999Z'), // July 31, 2025
+      default: null,
     },
     reviewedAt: {
       type: Date,
@@ -78,7 +83,7 @@ const FullProposalSchema: Schema<IFullProposal> = new Schema(
     },
     finalSubmissionDeadline: {
       type: Date,
-      default: () => new Date('2025-08-15T22:59:59.999Z'), // August 15, 2025
+      default: null,
     },
     finalSubmittedAt: {
       type: Date,

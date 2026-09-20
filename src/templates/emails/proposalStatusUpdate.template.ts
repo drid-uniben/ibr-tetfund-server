@@ -31,21 +31,13 @@ export const proposalStatusUpdateTemplate = (
     if (fundingAmount) {
       bodyContent += `<p>You have the opportunity of being awarded a funding of NGN ${fundingAmount.toLocaleString()} after the next stage</p>`;
     }
-    if (feedbackComments) {
-      bodyContent += `
-        <div class="feedback">
-            <p><strong>Feedback from the review committee:</strong></p>
-            <p>${feedbackComments}</p>
-        </div>
-      `;
-    }
     bodyContent += `
         <p>You are hereby invited to submit a full proposal on the portal${
           formattedDeadline
             ? ` on or before <strong>${formattedDeadline}</strong>`
             : ''
         }.</p>
-        <p>Login into your researcher dashboard using your credentials to view the full proposal template, review your feedback, and submit your full proposal.</p>
+        <p>Login into your researcher dashboard using your credentials to view the full proposal template and submit your full proposal.</p>
     `;
   } else if (status === ProposalStatus.REJECTED) {
     subjectLine = 'Update on Your Proposal Submission: Decision Made';

@@ -124,6 +124,11 @@ class SubmitFullProposalController {
         return;
       }
 
+      // Also snapshot the (separate) final-submission window up front, so
+      // finalSubmissionDeadline reflects reality immediately rather than
+      // sitting null until the researcher reaches that later stage.
+      const finalSubmissionWindow = await resolveWindow('final_submission');
+
       // Handle document file upload
       if (!req.files || !('docFile' in req.files)) {
         res.status(400).json({
@@ -142,7 +147,8 @@ class SubmitFullProposalController {
         proposal: proposalId,
         submitter: userId,
         docFile: docFileUrl,
-        deadline: window.closesAt ?? undefined,
+        deadline: window.closesAt ?? null,
+        finalSubmissionDeadline: finalSubmissionWindow.closesAt ?? null,
       });
 
       await fullProposal.save();
@@ -313,9 +319,7 @@ class SubmitFullProposalController {
       fullProposal.finalSubmission = finalSubmissionUrl;
       fullProposal.submitted = true;
       fullProposal.finalSubmittedAt = new Date();
-      if (window.closesAt) {
-        fullProposal.finalSubmissionDeadline = window.closesAt;
-      }
+      fullProposal.finalSubmissionDeadline = window.closesAt ?? null;
 
       await fullProposal.save();
 
