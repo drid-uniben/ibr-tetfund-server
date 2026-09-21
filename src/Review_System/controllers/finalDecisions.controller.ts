@@ -58,6 +58,8 @@ class DecisionsController {
         order = 'desc',
         faculty,
         threshold = 70, // Add threshold parameter
+        search, // Free-text match on project title / submitter name
+        status, // Award status filter: 'pending' | 'approved' | 'declined'
       } = req.query;
 
       const pageNum = parseInt(page as string, 10);
@@ -378,6 +380,40 @@ class DecisionsController {
         });
       }
 
+      // Apply award-status filter if provided (server-side equivalent of
+      // the "Filter" dropdown - previously done client-side against only
+      // the current page, which silently missed anything outside it)
+      if (status && status !== 'all') {
+        dataPipeline.push({
+          $match: {
+            'awardDetails.status': status as string,
+          },
+        });
+      }
+
+      // Apply search filter if provided (server-side equivalent of the
+      // "Search" box - previously done client-side against only the
+      // current page, which silently missed anything outside it)
+      if (search) {
+        const escapedSearch = (search as string).replace(
+          /[.*+?^${}()|[\]\\]/g,
+          '\\$&'
+        );
+        dataPipeline.push({
+          $match: {
+            $or: [
+              { projectTitle: { $regex: escapedSearch, $options: 'i' } },
+              {
+                'submitterDetails.name': {
+                  $regex: escapedSearch,
+                  $options: 'i',
+                },
+              },
+            ],
+          },
+        });
+      }
+
       // Add projection to clean up response
       dataPipeline.push({
         $project: {
@@ -437,6 +473,15 @@ class DecisionsController {
       } else {
         sortObj[sort as string] = order === 'asc' ? 1 : -1;
       }
+
+      // Deterministic tiebreaker: without this, documents that tie on the
+      // primary sort key (e.g. two proposals with the same finalScore) can
+      // come back in a different relative order on each query execution.
+      // Combined with $skip/$limit across separate page requests, that
+      // causes a proposal to appear on two consecutive pages (duplicate)
+      // or on neither (silently skipped) - _id is always unique, so it
+      // guarantees a fully stable ordering across page loads.
+      sortObj._id = 1;
 
       dataPipeline.push({ $sort: sortObj });
 
