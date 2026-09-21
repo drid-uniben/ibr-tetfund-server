@@ -56,6 +56,7 @@ class FullProposalDecisionsController {
         order = 'desc',
         faculty,
         status,
+        search, // Free-text match on project title / submitter name
       } = req.query;
 
       const pageNum = parseInt(page as string, 10);
@@ -289,11 +290,32 @@ class FullProposalDecisionsController {
         });
       }
 
-      // Apply status filter if provided
-      if (status) {
+      // Apply status filter if provided (server-side, against full dataset)
+      if (status && status !== 'all') {
         dataPipeline.push({
           $match: {
             status: status as string,
+          },
+        });
+      }
+
+      // Apply search filter if provided (server-side, against full dataset)
+      if (search) {
+        const escapedSearch = (search as string).replace(
+          /[.*+?^${}()|[\]\\]/g,
+          '\\$&'
+        );
+        dataPipeline.push({
+          $match: {
+            $or: [
+              { 'originalProposal.projectTitle': { $regex: escapedSearch, $options: 'i' } },
+              {
+                'submitter.name': {
+                  $regex: escapedSearch,
+                  $options: 'i',
+                },
+              },
+            ],
           },
         });
       }
@@ -356,6 +378,8 @@ class FullProposalDecisionsController {
       } else {
         sortObj[sort as string] = order === 'asc' ? 1 : -1;
       }
+      // Deterministic tiebreaker: guarantees stable ordering across page loads.
+      sortObj._id = 1;
 
       dataPipeline.push({ $sort: sortObj });
 
