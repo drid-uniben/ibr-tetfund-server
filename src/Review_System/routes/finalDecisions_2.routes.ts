@@ -18,12 +18,28 @@ router.get(
   fullProposalDecisionsController.getAllFullProposals
 );
 
+// Export reviewed full proposals as a Word document
+router.get(
+  '/export-docx',
+  authenticateAdminToken,
+  adminRateLimiter,
+  fullProposalDecisionsController.exportFullProposalsDocx
+);
+
 // Get specific full proposal by ID
 router.get(
   '/full-proposal/:id',
   authenticateAdminToken,
   adminRateLimiter,
   fullProposalDecisionsController.getFullProposalById
+);
+
+// Save the admin's working review (score, comments, budget) without deciding
+router.patch(
+  '/full-proposal/:id/draft-review',
+  authenticateAdminToken,
+  adminRateLimiter,
+  fullProposalDecisionsController.saveDraftReview
 );
 
 // Update full proposal status (approve/reject with review comments)

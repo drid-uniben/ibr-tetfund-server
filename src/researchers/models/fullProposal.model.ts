@@ -22,7 +22,15 @@ export interface IFullProposal extends Document {
   // means no deadline was configured at that time - never a stale fallback date.
   deadline: Date | null;
   reviewedAt?: Date;
-  reviewComments?: string;
+  reviewComments?: string; // Comments released to the researcher (email + dashboard)
+  // Admin-only working review (never exposed to researchers). Saved from the
+  // decision detail page before a final decision; used to prefill the
+  // approve/reject dialog and for the Word export.
+  draftReviewComments?: string;
+  draftFundingAmount?: number;
+  draftReviewedAt?: Date;
+  lastNotifiedAt?: Date;
+  notificationCount?: number;
   finalSubmission?: string; // URL/path to uploaded document
   submitted: boolean;
   // Snapshot of the 'final_submission' window, refreshed each time the final
@@ -73,6 +81,23 @@ const FullProposalSchema: Schema<IFullProposal> = new Schema(
     },
     reviewComments: {
       type: String,
+    },
+    draftReviewComments: {
+      type: String,
+    },
+    draftFundingAmount: {
+      type: Number,
+      min: [0, 'Funding amount cannot be negative'],
+    },
+    draftReviewedAt: {
+      type: Date,
+    },
+    lastNotifiedAt: {
+      type: Date,
+    },
+    notificationCount: {
+      type: Number,
+      default: 0,
     },
     finalSubmission: {
       type: String,
