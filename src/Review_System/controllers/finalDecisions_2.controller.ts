@@ -4,12 +4,26 @@ import FullProposal, {
   FullProposalStatus,
 } from '../../researchers/models/fullProposal.model';
 import Award, { AwardStatus } from '../../Review_System/models/award.model';
-import { NotFoundError, UnauthorizedError } from '../../utils/customErrors';
+import {
+  BadRequestError,
+  NotFoundError,
+  UnauthorizedError,
+} from '../../utils/customErrors';
 import asyncHandler from '../../utils/asyncHandler';
 import logger from '../../utils/logger';
 import { IUser } from '../../model/user.model';
 import emailService from '../../services/email.service';
 import { resolveWindow } from '../../model/submissionWindow.model';
+import {
+  EXPORT_SORTS,
+  EXPORT_THEN_BY,
+  ExportEntry,
+  ExportSort,
+  ExportThenBy,
+  buildFullProposalsDocx,
+  parseExportFields,
+  resolveFunding,
+} from '../../utils/fullProposalDocx';
 
 // Define a generic response interface for admin controller
 interface IAdminResponse {
@@ -308,9 +322,9 @@ class FullProposalDecisionsController {
         dataPipeline.push({
           $match: {
             $or: [
-              { 'originalProposal.projectTitle': { $regex: escapedSearch, $options: 'i' } },
+              { 'proposalDetails.projectTitle': { $regex: escapedSearch, $options: 'i' } },
               {
-                'submitter.name': {
+                'submitterDetails.name': {
                   $regex: escapedSearch,
                   $options: 'i',
                 },
@@ -330,6 +344,11 @@ class FullProposalDecisionsController {
           deadline: 1,
           reviewedAt: 1,
           reviewComments: 1,
+          draftReviewComments: 1,
+          draftFundingAmount: 1,
+          draftReviewedAt: 1,
+          lastNotifiedAt: 1,
+          notificationCount: 1,
           createdAt: 1,
           updatedAt: 1,
           originalProposal: {
@@ -531,6 +550,115 @@ class FullProposalDecisionsController {
     }
   );
 
+  // Save the admin's working review (score, comments, budget) before a final
+  // decision. Stored separately from reviewComments / Award.fundingAmount so
+  // nothing reaches the researcher until a decision is made and notified.
+  saveDraftReview = asyncHandler(
+    async (req: Request, res: Response<IAdminResponse>): Promise<void> => {
+      const user = (req as AdminAuthenticatedRequest).user;
+      if (user.role !== 'admin') {
+        throw new UnauthorizedError(
+          'You do not have permission to access this resource'
+        );
+      }
+
+      const { id } = req.params;
+      const { score, reviewComments, fundingAmount } = req.body;
+
+      const set: Record<string, unknown> = {};
+      const unset: Record<string, 1> = {};
+
+      if (score !== undefined) {
+        const parsedScore = Number(score);
+        if (!Number.isFinite(parsedScore) || parsedScore < 1 || parsedScore > 100) {
+          throw new BadRequestError('Score must be between 1 and 100');
+        }
+        set.score = parsedScore;
+      }
+
+      if (reviewComments !== undefined) {
+        if (typeof reviewComments !== 'string') {
+          throw new BadRequestError('Review comments must be text');
+        }
+        if (reviewComments.trim()) {
+          set.draftReviewComments = reviewComments.trim();
+        } else {
+          unset.draftReviewComments = 1;
+        }
+      }
+
+      if (fundingAmount !== undefined) {
+        if (fundingAmount === null || fundingAmount === '') {
+          unset.draftFundingAmount = 1;
+        } else {
+          const parsedFunding = Number(fundingAmount);
+          if (!Number.isFinite(parsedFunding) || parsedFunding <= 0) {
+            throw new BadRequestError('Funding amount must be a positive number');
+          }
+          set.draftFundingAmount = parsedFunding;
+        }
+      }
+
+      if (Object.keys(set).length === 0 && Object.keys(unset).length === 0) {
+        throw new BadRequestError(
+          'Provide a score, review comments or funding amount to save'
+        );
+      }
+
+      const fullProposal = await FullProposal.findById(id);
+      if (!fullProposal) {
+        throw new NotFoundError('Full proposal not found');
+      }
+
+      const award = await Award.findOne({
+        proposal: fullProposal.proposal,
+        status: AwardStatus.APPROVED,
+      });
+      if (!award) {
+        throw new UnauthorizedError(
+          'This full proposal is not associated with an approved award'
+        );
+      }
+
+      set.draftReviewedAt = new Date();
+
+      // Conditional on the proposal still being undecided, so a stale save
+      // from a second admin can never overwrite a decision that was just made.
+      const updated = await FullProposal.findOneAndUpdate(
+        {
+          _id: id,
+          status: {
+            $in: [FullProposalStatus.SUBMITTED, FullProposalStatus.UNDER_REVIEW],
+          },
+        },
+        {
+          $set: set,
+          ...(Object.keys(unset).length ? { $unset: unset } : {}),
+        },
+        { new: true, runValidators: true }
+      );
+
+      if (!updated) {
+        throw new BadRequestError(
+          'A decision has already been made on this full proposal; the review can no longer be edited'
+        );
+      }
+
+      logger.info(`Admin ${user.id} saved draft review for full proposal ${id}`);
+
+      res.status(200).json({
+        success: true,
+        message: 'Review saved successfully',
+        data: {
+          score: updated.score,
+          draftReviewComments: updated.draftReviewComments ?? '',
+          draftFundingAmount: updated.draftFundingAmount ?? null,
+          draftReviewedAt: updated.draftReviewedAt,
+        },
+      });
+    }
+  );
+
   // Update full proposal status (approve/reject with review comments)
   updateFullProposalStatus = asyncHandler(
     async (req: Request, res: Response<IAdminResponse>): Promise<void> => {
@@ -542,7 +670,7 @@ class FullProposalDecisionsController {
       }
 
       const { id } = req.params;
-      const { status, reviewComments, fundingAmount } = req.body;
+      const { status, reviewComments, fundingAmount, sendComments } = req.body;
 
       // Validate status
       if (!Object.values(FullProposalStatus).includes(status)) {
@@ -574,28 +702,60 @@ class FullProposalDecisionsController {
         );
       }
 
+      // Funding amount (approval only) must be a positive finite number.
+      const hasFunding = fundingAmount !== undefined && fundingAmount !== null;
+      const parsedFunding = hasFunding ? Number(fundingAmount) : undefined;
+      if (
+        status === FullProposalStatus.APPROVED &&
+        parsedFunding !== undefined &&
+        (!Number.isFinite(parsedFunding) || parsedFunding <= 0)
+      ) {
+        throw new BadRequestError('Funding amount must be a positive number');
+      }
+
+      const finalComments =
+        typeof reviewComments === 'string' ? reviewComments.trim() : '';
+
+      // A rejection may choose NOT to release comments, but only when a draft
+      // review already exists (the comments are then kept for the export).
+      // Without a draft, or without the flag, behaviour is unchanged: the
+      // comments are released to the researcher.
+      const hasDraft = Boolean(fullProposal.draftReviewComments?.trim());
+      const releaseComments = !(
+        status === FullProposalStatus.REJECTED &&
+        hasDraft &&
+        sendComments === false
+      );
+
       // Update the full proposal
       fullProposal.status = status;
-      fullProposal.reviewComments = reviewComments || '';
+      fullProposal.reviewComments = releaseComments ? finalComments : '';
+      if (finalComments) {
+        // Keep the admin-side copy in sync with what was finally written
+        fullProposal.draftReviewComments = finalComments;
+      }
       fullProposal.reviewedAt = new Date();
 
       // If approving the full proposal, update the award funding amount
       if (
         status === FullProposalStatus.APPROVED &&
-        fundingAmount !== undefined
+        parsedFunding !== undefined
       ) {
-        award.fundingAmount = fundingAmount;
+        award.fundingAmount = parsedFunding;
+        fullProposal.draftFundingAmount = parsedFunding;
         await award.save();
 
         logger.info(
-          `Admin ${user.id} updated funding amount to ${fundingAmount} for full proposal ${id}`
+          `Admin ${user.id} updated funding amount to ${parsedFunding} for full proposal ${id}`
         );
       }
 
       await fullProposal.save();
 
       logger.info(
-        `Admin ${user.id} updated full proposal ${id} status to ${status}`
+        `Admin ${user.id} updated full proposal ${id} status to ${status}${
+          releaseComments ? '' : ' (review comments withheld from researcher)'
+        }`
       );
 
       res.status(200).json({
@@ -674,6 +834,187 @@ class FullProposalDecisionsController {
           updatedAt: new Date(),
         },
       });
+    }
+  );
+
+  // Export reviewed full proposals to a single Word document.
+  // "Reviewed" = has review comments (admin draft or released). Query:
+  //   fields      csv of title,name,faculty,department,score,status,comments,funding,link (default: all)
+  //   sort        title | name | score | submittedAt | faculty | faculty_department
+  //   thenBy      title | name | score | submittedAt (ordering inside faculty groups)
+  //   order       asc | desc
+  //   faculty / department   csv filters (exact titles)
+  //   status      all | submitted | approved | rejected
+  //   includeUnreviewed=true  also include proposals without comments
+  //   requireScore=true       only proposals that have a score
+  exportFullProposalsDocx = asyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const user = (req as AdminAuthenticatedRequest).user;
+      if (user.role !== 'admin') {
+        throw new UnauthorizedError(
+          'You do not have permission to access this resource'
+        );
+      }
+
+      const query = req.query;
+
+      const fields = parseExportFields(query.fields);
+      if (fields.length === 0) {
+        throw new BadRequestError('Select at least one field to export');
+      }
+
+      const sortRaw = typeof query.sort === 'string' ? query.sort : 'title';
+      if (!(EXPORT_SORTS as readonly string[]).includes(sortRaw)) {
+        throw new BadRequestError('Invalid sort option');
+      }
+      const sort = sortRaw as ExportSort;
+
+      const thenByRaw = typeof query.thenBy === 'string' ? query.thenBy : 'title';
+      if (!(EXPORT_THEN_BY as readonly string[]).includes(thenByRaw)) {
+        throw new BadRequestError('Invalid secondary sort option');
+      }
+      const thenBy = thenByRaw as ExportThenBy;
+
+      const defaultOrder =
+        sort === 'score' || (sort.startsWith('faculty') && thenBy === 'score') ? 'desc' : 'asc';
+      const order =
+        query.order === 'asc' || query.order === 'desc' ? query.order : defaultOrder;
+
+      const toList = (value: unknown): string[] =>
+        (Array.isArray(value) ? value : typeof value === 'string' ? value.split(',') : [])
+          .map((v) => String(v).trim())
+          .filter(Boolean);
+      const faculties = toList(query.faculty);
+      const departments = toList(query.department);
+
+      const status =
+        typeof query.status === 'string' &&
+        Object.values(FullProposalStatus).includes(query.status as never) ? query.status : undefined;
+
+      const filters: Record<string, unknown>[] = [];
+      if (faculties.length) {
+        filters.push({ 'submitterDetails.faculty': { $in: faculties } });
+      }
+      if (departments.length) {
+        filters.push({ 'submitterDetails.department': { $in: departments } });
+      }
+      if (status) {
+        filters.push({ status });
+      }
+      if (query.includeUnreviewed !== 'true') {
+        filters.push({
+          $or: [
+            { draftReviewComments: { $nin: [null, ''] } },
+            { reviewComments: { $nin: [null, ''] } },
+          ],
+        });
+      }
+      if (query.requireScore === 'true') {
+        filters.push({ score: { $exists: true, $ne: null } });
+      }
+
+      const pipeline: any[] = [
+        {
+          $lookup: {
+            from: 'Proposals',
+            localField: 'proposal',
+            foreignField: '_id',
+            as: 'proposalDetails',
+          },
+        },
+        { $unwind: '$proposalDetails' },
+        {
+          $lookup: {
+            from: 'awards',
+            localField: 'proposal',
+            foreignField: 'proposal',
+            as: 'awardDetails',
+          },
+        },
+        { $unwind: '$awardDetails' },
+        { $match: { 'awardDetails.status': AwardStatus.APPROVED } },
+        {
+          $lookup: {
+            from: 'Users_2',
+            localField: 'submitter',
+            foreignField: '_id',
+            as: 'submitterDetails',
+          },
+        },
+        { $unwind: '$submitterDetails' },
+        ...(filters.length ? [{ $match: { $and: filters } }] : []),
+        {
+          $project: {
+            status: 1,
+            score: 1,
+            submittedAt: 1,
+            docFile: 1,
+            reviewComments: 1,
+            draftReviewComments: 1,
+            draftFundingAmount: 1,
+            title: '$proposalDetails.projectTitle',
+            name: '$submitterDetails.name',
+            faculty: '$submitterDetails.faculty',
+            department: '$submitterDetails.department',
+            awardAmount: '$awardDetails.fundingAmount',
+          },
+        },
+      ];
+
+      const rows = await FullProposal.aggregate(pipeline);
+
+      if (rows.length === 0) {
+        throw new NotFoundError(
+          'No full proposals match the selected filters. Save review comments on the detail page first, or widen the filters.'
+        );
+      }
+
+      const baseUrl = process.env.API_URL || 'http://localhost:3000';
+      const entries: ExportEntry[] = rows.map((row: any) => {
+        const doc: string = row.docFile || '';
+        let link = '';
+        if (doc) {
+          link = /^https?:\/\//i.test(doc) ? doc : `${baseUrl}/${doc.replace(/^\/+/, '')}`;
+        }
+        return {
+          title: row.title || '',
+          name: row.name || '',
+          faculty: row.faculty || '',
+          department: row.department || '',
+          score: typeof row.score === 'number' ? row.score : null,
+          status: row.status,
+          comments: row.draftReviewComments || row.reviewComments || '',
+          fundingAmount: resolveFunding(
+            row.status,
+            row.awardAmount,
+            row.draftFundingAmount
+          ),
+          link,
+          submittedAt: row.submittedAt ? new Date(row.submittedAt) : null,
+        };
+      });
+
+      const buffer = await buildFullProposalsDocx(entries, {
+        fields,
+        sort,
+        thenBy,
+        order,
+      });
+
+      const stamp = new Date().toISOString().slice(0, 10);
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      );
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="full-proposal-review-${stamp}.docx"`
+      );
+      res.status(200).send(buffer);
+
+      logger.info(
+        `Admin ${user.id} exported ${entries.length} full proposals to docx (sort: ${sort}, fields: ${fields.join(',')})`
+      );
     }
   );
 
@@ -787,6 +1128,12 @@ class FullProposalDecisionsController {
       logger.info(
         `Admin ${user.id} notified applicant for full proposal ${fullProposalId}`
       );
+
+      // Update notification tracking (mirrors the first decision flow)
+      await FullProposal.findByIdAndUpdate(fullProposalId, {
+        lastNotifiedAt: new Date(),
+        $inc: { notificationCount: 1 },
+      });
 
       res.status(200).json({
         success: true,

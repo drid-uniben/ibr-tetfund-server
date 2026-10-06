@@ -396,6 +396,7 @@ class SubmitFullProposalController {
       const now = new Date();
       const isApproved = fullProposal.status === 'approved';
       const hasSubmitted = fullProposal.submitted;
+      const isDecided = ['approved', 'rejected'].includes(fullProposal.status);
 
       res.status(200).json({
         success: true,
@@ -406,7 +407,9 @@ class SubmitFullProposalController {
           isWithinDeadline,
           deadline: closesAt ? closesAt.toISOString() : null,
           daysRemaining: computeDaysRemaining(closesAt, isWithinDeadline, now),
-          reviewComments: fullProposal.reviewComments,
+          // Only released comments, and only once a decision exists
+          // (draft comments live in draftReviewComments and stay admin-only).
+          reviewComments: isDecided ? fullProposal.reviewComments : undefined,
         },
       });
     }
