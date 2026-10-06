@@ -40,19 +40,22 @@ export const fullProposalStatusUpdateTemplate = (
         <p>Dear ${name},</p>
         <p>We regret to inform you that your full proposal "<strong>${projectTitle}</strong>" was not shortlisted for funding at this time.</p>
     `;
-    if (feedbackComments) {
+    if (feedbackComments && feedbackComments.trim()) {
       bodyContent += `
         <div class="feedback">
             <p><strong>Feedback from the review committee:</strong></p>
-            <p>${feedbackComments}</p>
+            <p>${feedbackComments.trim()}</p>
         </div>
-      `;
-    }
-    bodyContent += `
         <p>We appreciate the time and effort you put into your proposal.</p>
         <p>While it wasn't shortlisted this time, we encourage you to consider the feedback and apply again in the future.</p>
         <p>You can log into your dashboard at any time using your credentials to review this feedback again.</p>
       `;
+    } else {
+      bodyContent += `
+        <p>We appreciate the time and effort you put into your proposal and encourage you to apply again in future calls.</p>
+        <p>You can log into your dashboard at any time using your credentials for more details.</p>
+      `;
+    }
   } else {
     subjectLine = 'Update on your Proposal Submission';
     bodyContent = `
