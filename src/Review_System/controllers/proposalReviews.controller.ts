@@ -269,9 +269,7 @@ class ProposalReviewsController {
       }
 
       if (faculty) {
-        matchConditions['facultyDetails._id'] = new mongoose.Types.ObjectId(
-          faculty.toString()
-        );
+        matchConditions['facultyDetails._id'] = faculty.toString();
       }
 
       if (discrepancy === 'true') {
