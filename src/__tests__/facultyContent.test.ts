@@ -11,7 +11,7 @@ import {
 
 describe('facultyContent dataset', () => {
   it('contains the expected set of curated academic units', () => {
-    expect(academicUnits).toHaveLength(40);
+    expect(academicUnits).toHaveLength(46);
   });
 
   it('excludes non-academic exam/cert bodies (JUPEB, CBT, CERTIFICATES)', () => {
