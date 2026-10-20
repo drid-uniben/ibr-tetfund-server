@@ -7,10 +7,12 @@ import {
   HeadingLevel,
   Packer,
   PageNumber,
+  PageOrientation,
   Paragraph,
   ShadingType,
   Table,
   TableCell,
+  TableLayoutType,
   TableRow,
   TextRun,
   WidthType,
@@ -52,12 +54,24 @@ export interface ExportEntry {
   status: string; // submitted | under_review | approved | rejected
   comments: string;
   fundingAmount: number | null; // already resolved via resolveFunding()
+  fundingIsEstimate?: boolean; // true when fundingAmount is the researcher's estimated budget
   link: string;
   submittedAt: Date | null;
 }
 
+// Cards = one heading + label/value table per proposal (original layout).
+// Table = landscape, one row per proposal, one column per selected field.
+export const EXPORT_LAYOUTS = ['cards', 'table'] as const;
+export type ExportLayout = (typeof EXPORT_LAYOUTS)[number];
+
+// How the full proposal document is shown: the raw URL, or a short "View" link.
+export const EXPORT_LINK_STYLES = ['url', 'view'] as const;
+export type ExportLinkStyle = (typeof EXPORT_LINK_STYLES)[number];
+
 export interface ExportOptions {
   fields: ExportField[];
+  layout?: ExportLayout; // default 'cards'
+  linkStyle?: ExportLinkStyle; // default 'url'
   sort: ExportSort;
   thenBy: ExportThenBy;
   order: 'asc' | 'desc';
@@ -105,22 +119,41 @@ export const parseExportFields = (raw: unknown): ExportField[] => {
 };
 
 /**
- * Funding shown in the export: the awarded amount once approved; the admin's
- * draft budget while undecided; nothing for a rejection.
+ * Funding shown in the export, with where it came from:
+ *  - approved: the awarded amount (falls back to the researcher's estimated
+ *    budget if no award amount was recorded)
+ *  - undecided: the admin's draft budget, else the researcher's estimated budget
+ *  - rejected: nothing
+ * `isEstimate` is true only when the researcher's estimated budget is used, so
+ * the export can label it and nobody mistakes it for an approved amount.
  */
+export const resolveFundingWithSource = (
+  status: string,
+  awardAmount?: number | null,
+  draftAmount?: number | null,
+  estimatedBudget?: number | null
+): { amount: number | null; isEstimate: boolean } => {
+  if (status === 'rejected') {
+    return { amount: null, isEstimate: false };
+  }
+  const primary = status === 'approved' ? awardAmount : draftAmount;
+  if (typeof primary === 'number') {
+    return { amount: primary, isEstimate: false };
+  }
+  if (typeof estimatedBudget === 'number') {
+    return { amount: estimatedBudget, isEstimate: true };
+  }
+  return { amount: null, isEstimate: false };
+};
+
 export const resolveFunding = (
   status: string,
   awardAmount?: number | null,
-  draftAmount?: number | null
-): number | null => {
-  if (status === 'approved') {
-    return typeof awardAmount === 'number' ? awardAmount : null;
-  }
-  if (status === 'rejected') {
-    return null;
-  }
-  return typeof draftAmount === 'number' ? draftAmount : null;
-};
+  draftAmount?: number | null,
+  estimatedBudget?: number | null
+): number | null =>
+  resolveFundingWithSource(status, awardAmount, draftAmount, estimatedBudget)
+    .amount;
 
 const statusLabel = (status: string): string => {
   switch (status) {
@@ -137,7 +170,8 @@ const statusLabel = (status: string): string => {
 
 const fundingLabel = (entry: ExportEntry): string => {
   if (typeof entry.fundingAmount === 'number') {
-    return `₦${entry.fundingAmount.toLocaleString('en-NG')}`;
+    const formatted = `₦${entry.fundingAmount.toLocaleString('en-NG')}`;
+    return entry.fundingIsEstimate ? `${formatted} (Estimated)` : formatted;
   }
   return entry.status === 'rejected' ? 'Not funded (rejected)' : 'Not set';
 };
@@ -234,27 +268,38 @@ const cellBorders = {
   right: thinBorder,
 };
 
-const valueCell = (field: ExportField, entry: ExportEntry): TableCell => {
+const linkParagraph = (
+  entry: ExportEntry,
+  linkStyle: ExportLinkStyle,
+  size: number
+): Paragraph =>
+  new Paragraph({
+    children: entry.link
+      ? [
+          new ExternalHyperlink({
+            link: entry.link,
+            children: [
+              new TextRun({
+                text: linkStyle === 'view' ? 'View' : entry.link,
+                color: '0563C1',
+                underline: {},
+                size,
+              }),
+            ],
+          }),
+        ]
+      : [new TextRun({ text: NONE, size })],
+  });
+
+const valueCell = (
+  field: ExportField,
+  entry: ExportEntry,
+  linkStyle: ExportLinkStyle = 'url'
+): TableCell => {
   let children: Paragraph[];
   switch (field) {
     case 'link':
-      children = [
-        new Paragraph({
-          children: entry.link ? [
-            new ExternalHyperlink({
-              link: entry.link,
-              children: [
-                new TextRun({
-                  text: entry.link,
-                  color: '0563C1',
-                  underline: {},
-                  size: 21,
-                }),
-              ],
-            }),
-          ] : [new TextRun({ text: NONE, size: 21 })],
-        }),
-      ];
+      children = [linkParagraph(entry, linkStyle, 21)];
       break;
     case 'comments':
       children = [new Paragraph({ children: textLines(entry.comments || NONE) })];
@@ -296,7 +341,8 @@ const labelCell = (field: ExportField): TableCell =>
 const entryBlock = (
   entry: ExportEntry,
   index: number,
-  fields: ExportField[]
+  fields: ExportField[],
+  linkStyle: ExportLinkStyle = 'url'
 ): (Paragraph | Table)[] => {
   const heading = fields.includes('title') ? `${index}. ${entry.title || 'Untitled proposal'}` : `Proposal ${index}`;
   const rowFields = fields.filter((f) => f !== 'title');
@@ -318,13 +364,121 @@ const entryBlock = (
           (field) =>
             new TableRow({
               cantSplit: field !== 'comments',
-              children: [labelCell(field), valueCell(field, entry)],
+              children: [labelCell(field), valueCell(field, entry, linkStyle)],
             })
         ),
       })
     );
   }
   return blocks;
+};
+
+// ---- Table layout (landscape A4) -----------------------------------------
+const LANDSCAPE_PAGE = { width: 11906, height: 16838 }; // portrait dims; docx swaps for landscape
+const LANDSCAPE_MARGIN = 720; // 0.5"
+const TABLE_WIDTH = LANDSCAPE_PAGE.height - LANDSCAPE_MARGIN * 2; // usable width in twips
+const TABLE_FONT = 18; // 9pt
+const SN_WEIGHT = 4;
+
+// Relative column weights; normalised over the selected fields.
+const COLUMN_WEIGHTS: Record<ExportField, number> = {
+  title: 22,
+  name: 12,
+  faculty: 11,
+  department: 11,
+  score: 6,
+  status: 8,
+  comments: 30,
+  funding: 10,
+  link: 14,
+};
+
+export const tableColumnWidths = (fields: ExportField[]): number[] => {
+  const weights = [SN_WEIGHT, ...fields.map((f) => COLUMN_WEIGHTS[f])];
+  const total = weights.reduce((a, b) => a + b, 0);
+  const widths = weights.map((w) => Math.floor((w / total) * TABLE_WIDTH));
+  // Give any rounding remainder to the last column so the widths sum exactly.
+  widths[widths.length - 1] += TABLE_WIDTH - widths.reduce((a, b) => a + b, 0);
+  return widths;
+};
+
+const tCell = (width: number, children: Paragraph[], header = false): TableCell =>
+  new TableCell({
+    width: { size: width, type: WidthType.DXA },
+    borders: cellBorders,
+    shading: header ? { type: ShadingType.CLEAR, fill: 'D9E2F3', color: 'auto' } : undefined,
+    margins: { top: 50, bottom: 50, left: 80, right: 80 },
+    children,
+  });
+
+const tText = (text: string, bold = false): Paragraph =>
+  new Paragraph({ children: [new TextRun({ text, bold, size: TABLE_FONT })] });
+
+const tableValueCell = (
+  field: ExportField,
+  entry: ExportEntry,
+  width: number,
+  linkStyle: ExportLinkStyle
+): TableCell => {
+  switch (field) {
+    case 'title':
+      return tCell(width, [tText(entry.title || 'Untitled proposal', true)]);
+    case 'link':
+      return tCell(width, [linkParagraph(entry, linkStyle, TABLE_FONT)]);
+    case 'comments':
+      return tCell(
+        width,
+        (entry.comments || NONE).split(/\r?\n/).map((line) => tText(line))
+      );
+    case 'name':
+      return tCell(width, [tText(entry.name || NONE)]);
+    case 'faculty':
+      return tCell(width, [tText(entry.faculty || NONE)]);
+    case 'department':
+      return tCell(width, [tText(entry.department || NONE)]);
+    case 'score':
+      return tCell(width, [
+        tText(entry.score === null ? 'Not scored' : `${entry.score} / 100`),
+      ]);
+    case 'status':
+      return tCell(width, [tText(statusLabel(entry.status))]);
+    case 'funding':
+      return tCell(width, [tText(fundingLabel(entry))]);
+  }
+};
+
+// One table: header row (repeats on each page) + one row per entry.
+// `startIndex` keeps S/N continuous across faculty/department groups.
+const proposalsTable = (
+  entries: ExportEntry[],
+  startIndex: number,
+  fields: ExportField[],
+  linkStyle: ExportLinkStyle
+): Table => {
+  const widths = tableColumnWidths(fields);
+  const header = new TableRow({
+    tableHeader: true,
+    cantSplit: true,
+    children: [
+      tCell(widths[0], [tText('S/N', true)], true),
+      ...fields.map((f, i) => tCell(widths[i + 1], [tText(FIELD_LABELS[f], true)], true)),
+    ],
+  });
+  const rows = entries.map(
+    (entry, i) =>
+      new TableRow({
+        children: [
+          tCell(widths[0], [tText(String(startIndex + i))]),
+          ...fields.map((f, c) => tableValueCell(f, entry, widths[c + 1], linkStyle)),
+        ],
+      })
+  );
+  return new Table({
+    width: { size: TABLE_WIDTH, type: WidthType.DXA },
+    columnWidths: widths,
+    layout: TableLayoutType.FIXED,
+    rows: [header, ...rows],
+  });
 };
 
 export const buildFullProposalsDocx = async (
@@ -359,47 +513,84 @@ export const buildFullProposalsDocx = async (
     }),
   ];
 
-  let counter = 0;
-  let lastFaculty: string | null = null;
-  let lastDepartment: string | null = null;
+  const layout: ExportLayout = options.layout ?? 'cards';
+  const linkStyle: ExportLinkStyle = options.linkStyle ?? 'url';
   const groupByFaculty =
     options.sort === 'faculty' || options.sort === 'faculty_department';
 
-  for (const entry of sorted) {
-    if (groupByFaculty) {
-      const faculty = entry.faculty || UNSPECIFIED_FACULTY;
-      if (faculty !== lastFaculty) {
-        const count = sorted.filter(
-          (e) => (e.faculty || UNSPECIFIED_FACULTY) === faculty
-        ).length;
-        body.push(
-          new Paragraph({
-            heading: HeadingLevel.HEADING_1,
-            keepNext: true,
-            spacing: { before: 400, after: 120 },
-            children: [new TextRun({ text: `${faculty} (${count})`, bold: true })],
-          })
-        );
-        lastFaculty = faculty;
-        lastDepartment = null;
-      }
-      if (options.sort === 'faculty_department') {
-        const department = entry.department || UNSPECIFIED_DEPARTMENT;
-        if (department !== lastDepartment) {
-          body.push(
-            new Paragraph({
-              heading: HeadingLevel.HEADING_2,
-              keepNext: true,
-              spacing: { before: 240, after: 80 },
-              children: [new TextRun({ text: department, bold: true })],
-            })
-          );
-          lastDepartment = department;
-        }
+  const facultyHeading = (faculty: string, count: number): Paragraph =>
+    new Paragraph({
+      heading: HeadingLevel.HEADING_1,
+      keepNext: true,
+      spacing: { before: 400, after: 120 },
+      children: [new TextRun({ text: `${faculty} (${count})`, bold: true })],
+    });
+  const departmentHeading = (department: string): Paragraph =>
+    new Paragraph({
+      heading: HeadingLevel.HEADING_2,
+      keepNext: true,
+      spacing: { before: 240, after: 80 },
+      children: [new TextRun({ text: department, bold: true })],
+    });
+
+  if (layout === 'table') {
+    // Split the sorted list into consecutive runs, one table per run.
+    const runs: { faculty?: string; department?: string; entries: ExportEntry[] }[] = [];
+    for (const entry of sorted) {
+      const faculty = groupByFaculty ? entry.faculty || UNSPECIFIED_FACULTY : undefined;
+      const department =
+        options.sort === 'faculty_department'
+          ? entry.department || UNSPECIFIED_DEPARTMENT
+          : undefined;
+      const last = runs[runs.length - 1];
+      if (last && last.faculty === faculty && last.department === department) {
+        last.entries.push(entry);
+      } else {
+        runs.push({ faculty, department, entries: [entry] });
       }
     }
-    counter += 1;
-    body.push(...entryBlock(entry, counter, options.fields));
+    let index = 1;
+    let lastFaculty: string | undefined;
+    for (const run of runs) {
+      if (run.faculty !== undefined && run.faculty !== lastFaculty) {
+        const count = sorted.filter(
+          (e) => (e.faculty || UNSPECIFIED_FACULTY) === run.faculty
+        ).length;
+        body.push(facultyHeading(run.faculty, count));
+        lastFaculty = run.faculty;
+      }
+      if (run.department !== undefined) body.push(departmentHeading(run.department));
+      body.push(proposalsTable(run.entries, index, options.fields, linkStyle));
+      // A paragraph between tables stops Word from merging adjacent tables.
+      body.push(new Paragraph({ spacing: { after: 120 }, children: [] }));
+      index += run.entries.length;
+    }
+  } else {
+    let counter = 0;
+    let lastFaculty: string | null = null;
+    let lastDepartment: string | null = null;
+    for (const entry of sorted) {
+      if (groupByFaculty) {
+        const faculty = entry.faculty || UNSPECIFIED_FACULTY;
+        if (faculty !== lastFaculty) {
+          const count = sorted.filter(
+            (e) => (e.faculty || UNSPECIFIED_FACULTY) === faculty
+          ).length;
+          body.push(facultyHeading(faculty, count));
+          lastFaculty = faculty;
+          lastDepartment = null;
+        }
+        if (options.sort === 'faculty_department') {
+          const department = entry.department || UNSPECIFIED_DEPARTMENT;
+          if (department !== lastDepartment) {
+            body.push(departmentHeading(department));
+            lastDepartment = department;
+          }
+        }
+      }
+      counter += 1;
+      body.push(...entryBlock(entry, counter, options.fields, linkStyle));
+    }
   }
 
   const doc = new Document({
@@ -407,6 +598,20 @@ export const buildFullProposalsDocx = async (
     title: 'Full Proposal Review Report',
     sections: [
       {
+        properties:
+          layout === 'table'
+            ? {
+                page: {
+                  size: { ...LANDSCAPE_PAGE, orientation: PageOrientation.LANDSCAPE },
+                  margin: {
+                    top: LANDSCAPE_MARGIN,
+                    bottom: LANDSCAPE_MARGIN,
+                    left: LANDSCAPE_MARGIN,
+                    right: LANDSCAPE_MARGIN,
+                  },
+                },
+              }
+            : undefined,
         footers: {
           default: new Footer({
             children: [

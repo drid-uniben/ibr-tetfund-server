@@ -15,14 +15,18 @@ import { IUser } from '../../model/user.model';
 import emailService from '../../services/email.service';
 import { resolveWindow } from '../../model/submissionWindow.model';
 import {
+  EXPORT_LAYOUTS,
+  EXPORT_LINK_STYLES,
   EXPORT_SORTS,
   EXPORT_THEN_BY,
   ExportEntry,
   ExportSort,
+  ExportLayout,
+  ExportLinkStyle,
   ExportThenBy,
   buildFullProposalsDocx,
   parseExportFields,
-  resolveFunding,
+  resolveFundingWithSource,
 } from '../../utils/fullProposalDocx';
 
 // Define a generic response interface for admin controller
@@ -843,6 +847,8 @@ class FullProposalDecisionsController {
   //   sort        title | name | score | submittedAt | faculty | faculty_department
   //   thenBy      title | name | score | submittedAt (ordering inside faculty groups)
   //   order       asc | desc
+  //   layout      cards | table (default cards; table = landscape, one row per proposal)
+  //   linkStyle   url | view (default url; view = short clickable "View" link)
   //   faculty / department   csv filters (exact titles)
   //   status      all | submitted | approved | rejected
   //   includeUnreviewed=true  also include proposals without comments
@@ -874,6 +880,18 @@ class FullProposalDecisionsController {
         throw new BadRequestError('Invalid secondary sort option');
       }
       const thenBy = thenByRaw as ExportThenBy;
+
+      const layoutRaw = typeof query.layout === 'string' ? query.layout : 'cards';
+      if (!(EXPORT_LAYOUTS as readonly string[]).includes(layoutRaw)) {
+        throw new BadRequestError('Invalid layout option');
+      }
+      const layout = layoutRaw as ExportLayout;
+
+      const linkStyleRaw = typeof query.linkStyle === 'string' ? query.linkStyle : 'url';
+      if (!(EXPORT_LINK_STYLES as readonly string[]).includes(linkStyleRaw)) {
+        throw new BadRequestError('Invalid link style option');
+      }
+      const linkStyle = linkStyleRaw as ExportLinkStyle;
 
       const defaultOrder =
         sort === 'score' || (sort.startsWith('faculty') && thenBy === 'score') ? 'desc' : 'asc';
@@ -952,6 +970,7 @@ class FullProposalDecisionsController {
             reviewComments: 1,
             draftReviewComments: 1,
             draftFundingAmount: 1,
+            estimatedBudget: '$proposalDetails.estimatedBudget',
             title: '$proposalDetails.projectTitle',
             name: '$submitterDetails.name',
             faculty: '$submitterDetails.faculty',
@@ -976,6 +995,12 @@ class FullProposalDecisionsController {
         if (doc) {
           link = /^https?:\/\//i.test(doc) ? doc : `${baseUrl}/${doc.replace(/^\/+/, '')}`;
         }
+        const funding = resolveFundingWithSource(
+          row.status,
+          row.awardAmount,
+          row.draftFundingAmount,
+          row.estimatedBudget
+        );
         return {
           title: row.title || '',
           name: row.name || '',
@@ -984,11 +1009,8 @@ class FullProposalDecisionsController {
           score: typeof row.score === 'number' ? row.score : null,
           status: row.status,
           comments: row.draftReviewComments || row.reviewComments || '',
-          fundingAmount: resolveFunding(
-            row.status,
-            row.awardAmount,
-            row.draftFundingAmount
-          ),
+          fundingAmount: funding.amount,
+          fundingIsEstimate: funding.isEstimate,
           link,
           submittedAt: row.submittedAt ? new Date(row.submittedAt) : null,
         };
@@ -996,6 +1018,8 @@ class FullProposalDecisionsController {
 
       const buffer = await buildFullProposalsDocx(entries, {
         fields,
+        layout,
+        linkStyle,
         sort,
         thenBy,
         order,
