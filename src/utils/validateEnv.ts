@@ -47,6 +47,12 @@ const validateEnv = (): void => {
     ADMIN_EMAIL: email(),
     ADMIN_PASSWORD: str(),
     SUPPORT_EMAIL: email(),
+    // Controls what the "Notify" button on the Full Proposal decisions page sends
+    // to APPROVED researchers. 'default' sends the original decision email.
+    FULL_PROPOSAL_NOTIFY_MODE: str({
+      choices: ['default', 'feedback_updated', 'submission_open'],
+      default: 'default',
+    }),
   });
 };
 

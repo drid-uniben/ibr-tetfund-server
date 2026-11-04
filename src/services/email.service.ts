@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import nodemailer, { Transporter } from 'nodemailer';
 import logger from '../utils/logger';
 import validateEnv from '../utils/validateEnv';
@@ -22,6 +23,8 @@ import {
   proposalArchiveNotificationTemplate,
 } from '../templates/emails';
 import { fullProposalStatusUpdateTemplate } from '../templates/emails/fullProposalStatusUpdateTemplate';
+import { fullProposalFeedbackUpdatedTemplate } from '../templates/emails/fullProposalFeedbackUpdatedTemplate';
+import { finalSubmissionOpenTemplate } from '../templates/emails/finalSubmissionOpenTemplate';
 
 validateEnv();
 
@@ -177,6 +180,66 @@ class EmailService {
     } catch (error) {
       logger.error(
         `Failed to send full proposal status update email to ${to} for proposal ${projectTitle}:`,
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+      throw error;
+    }
+  }
+
+  // Temporary notify mode 'feedback_updated': tells an approved researcher that
+  // their review feedback now carries the TETFund final-submission format link.
+  async sendFullProposalFeedbackUpdatedEmail(
+    to: string,
+    name: string,
+    projectTitle: string
+  ): Promise<void> {
+    const loginUrl = `${this.frontendUrl}/researchers/login`;
+    try {
+      await this.transporter.sendMail({
+        from: this.emailFrom,
+        to: to,
+        subject: `Your Review Feedback Has Been Updated: "${projectTitle}"`,
+        html: fullProposalFeedbackUpdatedTemplate(name, projectTitle, loginUrl),
+      });
+      logger.info(
+        `Full proposal feedback updated email sent to: ${to} for proposal ${projectTitle}`
+      );
+    } catch (error) {
+      logger.error(
+        `Failed to send full proposal feedback updated email to ${to} for proposal ${projectTitle}:`,
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+      throw error;
+    }
+  }
+
+  // Notify mode 'submission_open': tells an approved researcher that the final
+  // submission window is open and when it closes.
+  async sendFinalSubmissionOpenEmail(
+    to: string,
+    name: string,
+    projectTitle: string,
+    finalSubmissionDeadline?: Date | null
+  ): Promise<void> {
+    const loginUrl = `${this.frontendUrl}/researchers/login`;
+    try {
+      await this.transporter.sendMail({
+        from: this.emailFrom,
+        to: to,
+        subject: `Final Submission Is Now Open: "${projectTitle}"`,
+        html: finalSubmissionOpenTemplate(
+          name,
+          projectTitle,
+          loginUrl,
+          finalSubmissionDeadline
+        ),
+      });
+      logger.info(
+        `Final submission open email sent to: ${to} for proposal ${projectTitle}`
+      );
+    } catch (error) {
+      logger.error(
+        `Failed to send final submission open email to ${to} for proposal ${projectTitle}:`,
         error instanceof Error ? error.message : 'Unknown error'
       );
       throw error;
