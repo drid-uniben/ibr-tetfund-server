@@ -1139,15 +1139,48 @@ class FullProposalDecisionsController {
       // admin-configurable submission window rather than a stored/stale date.
       const finalSubmissionWindow = await resolveWindow('final_submission');
 
-      // Send email notification about full proposal decision
-      await emailService.sendFullProposalStatusUpdateEmail(
-        submitterUser.email,
-        submitterUser.name,
-        proposalDetails.projectTitle,
-        fullProposal.status,
-        fullProposal.reviewComments,
-        finalSubmissionWindow.closesAt
-      );
+      // The "Notify" button normally re-sends the decision email. For APPROVED
+      // proposals the server .env can switch it via FULL_PROPOSAL_NOTIFY_MODE:
+      //   default           -> original decision email (also when unset)
+      //   feedback_updated  -> "your review feedback has been updated" email
+      //   submission_open   -> "final submission is now open" email
+      const notifyMode = process.env.FULL_PROPOSAL_NOTIFY_MODE || 'default';
+      const isApproved = fullProposal.status === FullProposalStatus.APPROVED;
+
+      if (isApproved && notifyMode === 'feedback_updated') {
+        await emailService.sendFullProposalFeedbackUpdatedEmail(
+          submitterUser.email,
+          submitterUser.name,
+          proposalDetails.projectTitle
+        );
+      } else if (isApproved && notifyMode === 'submission_open') {
+        if (!finalSubmissionWindow.isOpen) {
+          throw new BadRequestError(
+            'The final submission window is not open yet. Open it under Deadlines before sending this notification.'
+          );
+        }
+        if (fullProposal.submitted) {
+          throw new BadRequestError(
+            'This researcher has already completed the final submission'
+          );
+        }
+        await emailService.sendFinalSubmissionOpenEmail(
+          submitterUser.email,
+          submitterUser.name,
+          proposalDetails.projectTitle,
+          finalSubmissionWindow.closesAt
+        );
+      } else {
+        // Original behaviour: send email notification about full proposal decision
+        await emailService.sendFullProposalStatusUpdateEmail(
+          submitterUser.email,
+          submitterUser.name,
+          proposalDetails.projectTitle,
+          fullProposal.status,
+          fullProposal.reviewComments,
+          finalSubmissionWindow.closesAt
+        );
+      }
 
       logger.info(
         `Admin ${user.id} notified applicant for full proposal ${fullProposalId}`
