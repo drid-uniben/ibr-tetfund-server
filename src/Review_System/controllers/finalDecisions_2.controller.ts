@@ -81,6 +81,21 @@ class FullProposalDecisionsController {
       const limitNum = parseInt(limit as string, 10);
       const skip = (pageNum - 1) * limitNum;
 
+      // One status filter shared by the statistics and the list. Besides the
+      // proposal statuses it understands two final-submission views of the
+      // approved proposals: 'final_submitted' and 'final_pending'.
+      let statusMatch: Record<string, unknown> | null = null;
+      if (status === 'final_submitted') {
+        statusMatch = { status: FullProposalStatus.APPROVED, submitted: true };
+      } else if (status === 'final_pending') {
+        statusMatch = {
+          status: FullProposalStatus.APPROVED,
+          submitted: { $ne: true },
+        };
+      } else if (status && status !== 'all') {
+        statusMatch = { status: status as string };
+      }
+
       // Build aggregation pipeline for statistics
       const statisticsPipeline: any[] = [
         // First lookup the original proposal
@@ -144,13 +159,7 @@ class FullProposalDecisionsController {
           },
         ] : []),
         // Apply status filter if provided
-        ...(status ? [
-          {
-            $match: {
-              status: status as string,
-            },
-          },
-        ] : []),
+        ...(statusMatch ? [{ $match: statusMatch }] : []),
         // Calculate statistics
         {
           $group: {
@@ -309,12 +318,8 @@ class FullProposalDecisionsController {
       }
 
       // Apply status filter if provided (server-side, against full dataset)
-      if (status && status !== 'all') {
-        dataPipeline.push({
-          $match: {
-            status: status as string,
-          },
-        });
+      if (statusMatch) {
+        dataPipeline.push({ $match: statusMatch });
       }
 
       // Apply search filter if provided (server-side, against full dataset)
@@ -353,6 +358,8 @@ class FullProposalDecisionsController {
           draftReviewedAt: 1,
           lastNotifiedAt: 1,
           notificationCount: 1,
+          submitted: 1,
+          finalSubmittedAt: 1,
           createdAt: 1,
           updatedAt: 1,
           originalProposal: {
