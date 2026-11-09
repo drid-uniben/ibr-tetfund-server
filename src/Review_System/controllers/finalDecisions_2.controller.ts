@@ -1150,7 +1150,7 @@ class FullProposalDecisionsController {
       // proposals the server .env can switch it via FULL_PROPOSAL_NOTIFY_MODE:
       //   default           -> original decision email (also when unset)
       //   feedback_updated  -> "your review feedback has been updated" email
-      //   submission_open   -> "final submission is now open" email
+      //   submission_open   -> final submission deadline reminder (physical copies only)
       const notifyMode = process.env.FULL_PROPOSAL_NOTIFY_MODE || 'default';
       const isApproved = fullProposal.status === FullProposalStatus.APPROVED;
 
@@ -1161,21 +1161,12 @@ class FullProposalDecisionsController {
           proposalDetails.projectTitle
         );
       } else if (isApproved && notifyMode === 'submission_open') {
-        if (!finalSubmissionWindow.isOpen) {
-          throw new BadRequestError(
-            'The final submission window is not open yet. Open it under Deadlines before sending this notification.'
-          );
-        }
-        if (fullProposal.submitted) {
-          throw new BadRequestError(
-            'This researcher has already completed the final submission'
-          );
-        }
+        // Physical-only submission: the digital window stays closed, so no
+        // window or already-submitted check is applied here.
         await emailService.sendFinalSubmissionOpenEmail(
           submitterUser.email,
           submitterUser.name,
-          proposalDetails.projectTitle,
-          finalSubmissionWindow.closesAt
+          proposalDetails.projectTitle
         );
       } else {
         // Original behaviour: send email notification about full proposal decision

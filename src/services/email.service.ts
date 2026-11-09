@@ -213,26 +213,20 @@ class EmailService {
     }
   }
 
-  // Notify mode 'submission_open': tells an approved researcher that the final
-  // submission window is open and when it closes.
+  // Notify mode 'submission_open': reminds an approved researcher of the
+  // deadline for the physical-only final submission at the DRID office.
   async sendFinalSubmissionOpenEmail(
     to: string,
     name: string,
-    projectTitle: string,
-    finalSubmissionDeadline?: Date | null
+    projectTitle: string
   ): Promise<void> {
     const loginUrl = `${this.frontendUrl}/researchers/login`;
     try {
       await this.transporter.sendMail({
         from: this.emailFrom,
         to: to,
-        subject: `Final Submission Is Now Open: "${projectTitle}"`,
-        html: finalSubmissionOpenTemplate(
-          name,
-          projectTitle,
-          loginUrl,
-          finalSubmissionDeadline
-        ),
+        subject: `Final Submission Deadline, Friday 13th November 2026: "${projectTitle}"`,
+        html: finalSubmissionOpenTemplate(name, projectTitle, loginUrl),
       });
       logger.info(
         `Final submission open email sent to: ${to} for proposal ${projectTitle}`
